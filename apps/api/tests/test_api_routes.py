@@ -46,3 +46,16 @@ def test_asset_backdata_endpoint_exposes_source_inputs() -> None:
     assert payload["price_summary"]["rows"] == 260
     assert payload["fundamentals"][0]["currency"] == "USD"
     assert payload["source"]["provider"] == "SampleCsvDataProvider"
+
+
+def test_cors_allows_local_web_origin() -> None:
+    response = client.options(
+        "/assets/LMT/backdata",
+        headers={
+            "Origin": "http://localhost:3001",
+            "Access-Control-Request-Method": "GET",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://localhost:3001"
