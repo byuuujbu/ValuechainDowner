@@ -6,14 +6,23 @@ from app.data_providers.interfaces import (
     FundamentalsPeriod,
     MarketDataProvider,
 )
+from app.data_providers.factory import data_provider_status, get_configured_provider
+from app.data_providers.fmp import FinancialModelingPrepProvider
 from app.data_providers.sample_csv import SampleCsvDataProvider
+from app.data_providers.sec_edgar import SecEdgarClient, latest_annual_fact, normalize_cik
 
 __all__ = [
     "AssetProfile",
     "AssetReferenceProvider",
     "DailyPrice",
+    "FinancialModelingPrepProvider",
     "FundamentalDataProvider",
     "FundamentalsPeriod",
     "MarketDataProvider",
     "SampleCsvDataProvider",
+    "SecEdgarClient",
+    "data_provider_status",
+    "get_configured_provider",
+    "latest_annual_fact",
+    "normalize_cik",
 ]

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from app.data_providers import SampleCsvDataProvider
+from app.data_providers import SampleCsvDataProvider, data_provider_status
 from app.rules import RuleEngine
 from app.scoring import CommonStockScoringEngine
 from app.services.asset_backdata import get_asset_backdata
@@ -11,6 +11,11 @@ from app.services.journal import JOURNAL_REQUIREMENTS, WATCHLIST
 from app.services.space_map import INDUSTRIES, SPACE_MAP
 
 router = APIRouter()
+
+
+@router.get("/data-providers/status")
+def data_providers_status() -> dict[str, object]:
+    return data_provider_status()
 
 
 @router.get("/screening/results")

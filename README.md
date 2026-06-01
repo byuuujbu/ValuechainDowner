@@ -18,11 +18,12 @@ Implemented:
 - Multi-industry map foundation with reviewed Space seed map
 - Watchlist and journal requirement surfaces
 - Sample structural backtest endpoint
+- FMP and SEC EDGAR live-data provider scaffolding with safe sample fallback
 - Discord command preview script without bot token access
 
 Excluded from the MVP:
 
-- Live market/fundamental data provider
+- Paid live-data production sync jobs
 - Brokerage connection or order execution
 - Real Discord bot deployment
 - Investment recommendation wording
@@ -63,6 +64,7 @@ Open:
 
 - Web: <http://localhost:3001>
 - API health: <http://localhost:8001/health>
+- Data provider status: <http://localhost:8001/data-providers/status>
 
 ## Docker
 
@@ -115,11 +117,36 @@ Files:
 Provider interfaces:
 
 - `SampleCsvDataProvider`
+- `FinancialModelingPrepProvider`
+- `SecEdgarClient`
 - `MarketDataProvider`
 - `FundamentalDataProvider`
 - `AssetReferenceProvider`
 
 Sample data is deterministic development data. It is not evidence for a real investment decision.
+
+## Live Data Provider Scaffold
+
+Default mode remains sample data:
+
+```powershell
+DATA_PROVIDER_MODE=sample
+```
+
+FMP and SEC EDGAR are scaffolded but disabled until environment variables are configured:
+
+```powershell
+DATA_PROVIDER_MODE=fmp
+FMP_API_KEY=your_fmp_key
+SEC_USER_AGENT=ValuechainDowner research contact@example.com
+```
+
+Notes:
+
+- `FMP_API_KEY` is required before Financial Modeling Prep calls are made.
+- `SEC_USER_AGENT` is required before SEC EDGAR calls are made.
+- `/data-providers/status` reports whether providers are configured without exposing secrets.
+- If credentials are absent, existing sample-data screens continue to work.
 
 ## Scoring
 
@@ -175,6 +202,7 @@ Implemented gates:
 ## API Endpoints
 
 - `GET /health`
+- `GET /data-providers/status`
 - `GET /screening/results`
 - `GET /industries`
 - `GET /industries/space/value-chain`
