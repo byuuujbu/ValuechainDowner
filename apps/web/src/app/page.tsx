@@ -9,7 +9,7 @@ const screeningRows = [
     trend: 83.33,
     risk: 68.33,
     valuation: 88.33,
-    reason: "score and structural rules passed",
+    reason: "점수 기준과 구조 규칙을 통과",
   },
   {
     ticker: "NOC",
@@ -19,7 +19,7 @@ const screeningRows = [
     trend: 50,
     risk: 58.33,
     valuation: 20,
-    reason: "total_score_below_75; risk_score_below_60",
+    reason: "종합점수 75 미만, 위험점수 60 미만",
   },
   {
     ticker: "RKLB",
@@ -29,7 +29,7 @@ const screeningRows = [
     trend: 50,
     risk: 35,
     valuation: 0,
-    reason: "risk_score_below_60; valuation_score_below_40",
+    reason: "위험점수 60 미만, 밸류에이션 점수 40 미만",
   },
   {
     ticker: "BA",
@@ -39,26 +39,32 @@ const screeningRows = [
     trend: 16.67,
     risk: 38.33,
     valuation: 60,
-    reason: "quality_score_below_65; trend_score_below_65; risk_score_below_60",
+    reason: "퀄리티, 추세, 위험 기준 미달",
   },
 ];
 
-const industries = ["Space", "AI", "Semiconductor", "Medicine/Bio", "Robotics"];
+const statusLabels: Record<string, string> = {
+  candidate: "후보",
+  watch: "관망",
+  exclude: "제외",
+};
+
+const industries = ["우주", "AI", "반도체", "의학/바이오", "로보틱스"];
 const chainNodes = [
-  "Materials/Parts",
-  "Propulsion/Engines",
-  "Launch",
-  "Satellite Manufacturing",
-  "Ground/Communication",
-  "Space Data",
-  "Applications",
+  "소재/부품",
+  "추진체/엔진",
+  "발사체",
+  "위성 제조",
+  "지상국/통신",
+  "우주 데이터",
+  "정부/상업 적용",
 ];
 
 const companies = [
-  ["RKLB", "Launch + Satellite + Applications", "88"],
-  ["LMT", "Satellite + Applications", "82"],
-  ["NOC", "Satellite + Ground", "80"],
-  ["BA", "Launch + Applications", "65"],
+  ["RKLB", "발사체 + 위성 + 적용", "88"],
+  ["LMT", "위성 + 적용", "82"],
+  ["NOC", "위성 + 지상국", "80"],
+  ["BA", "발사체 + 적용", "65"],
 ];
 
 export default function Home() {
@@ -66,7 +72,7 @@ export default function Home() {
     <main className="shell">
       <header className="topbar">
         <div>
-          <p className="eyebrow">OVSA Phase MVP</p>
+          <p className="eyebrow">OVSA 페이즈 MVP</p>
           <h1>ValuechainDowner</h1>
         </div>
         <div className="apiBox">
@@ -75,51 +81,53 @@ export default function Home() {
         </div>
       </header>
 
-      <nav className="tabs" aria-label="Main sections">
-        <a href="#screening">Screening</a>
-        <a href="#map">Industry Map</a>
-        <a href="#watchlist">Watchlist</a>
-        <a href="#journal">Journal</a>
-        <a href="#backtest">Backtest</a>
+      <nav className="tabs" aria-label="주요 섹션">
+        <a href="#screening">스크리닝</a>
+        <a href="#map">산업맵</a>
+        <a href="#watchlist">관심종목</a>
+        <a href="#journal">투자일지</a>
+        <a href="#backtest">백테스트</a>
       </nav>
 
       <section id="screening" className="section">
         <div className="sectionHead">
           <div>
-            <h2>3-Day Screening</h2>
-            <p>Common-stock score, rule status, and explanation surface.</p>
+            <h2>3일 주기 스크리닝</h2>
+            <p>보통주 점수, 규칙 상태, 판단 사유를 한 화면에서 확인합니다.</p>
           </div>
-          <span className="pill">Review every 14 days</span>
+          <span className="pill">14일마다 리밸런싱 검토</span>
         </div>
         <div className="grid three">
           <div className="metric">
-            <span>Candidate</span>
+            <span>후보</span>
             <strong>1</strong>
           </div>
           <div className="metric">
-            <span>Watch</span>
+            <span>관망</span>
             <strong>3</strong>
           </div>
           <div className="metric">
-            <span>FX display</span>
-            <strong>KRW m</strong>
+            <span>환산 표시</span>
+            <strong>원화 백만원</strong>
           </div>
         </div>
-        <div className="table" role="table" aria-label="Screening results">
+        <div className="table" role="table" aria-label="스크리닝 결과">
           <div className="row header" role="row">
-            <span>Ticker</span>
-            <span>Status</span>
-            <span>Total</span>
-            <span>Score detail</span>
-            <span>Reason</span>
+            <span>티커</span>
+            <span>상태</span>
+            <span>종합</span>
+            <span>점수 세부</span>
+            <span>판단 사유</span>
           </div>
           {screeningRows.map((row) => (
             <div className="row" role="row" key={row.ticker}>
               <strong>{row.ticker}</strong>
-              <span className={`status ${row.status === "candidate" ? "pass" : "watch"}`}>{row.status}</span>
+              <span className={`status ${row.status === "candidate" ? "pass" : "watch"}`}>
+                {statusLabels[row.status]}
+              </span>
               <span>{row.total}</span>
               <span>
-                Q {row.quality} / T {row.trend} / R {row.risk} / V {row.valuation}
+                퀄 {row.quality} / 추세 {row.trend} / 위험 {row.risk} / 밸류 {row.valuation}
               </span>
               <span>{row.reason}</span>
             </div>
@@ -130,10 +138,10 @@ export default function Home() {
       <section id="map" className="section">
         <div className="sectionHead">
           <div>
-            <h2>Multi-Industry Map</h2>
-            <p>Space is implemented as reviewed seed; other industries are prepared as planned extensions.</p>
+            <h2>멀티 산업맵</h2>
+            <p>우주는 검토된 초기 맵으로 구현했고, 다른 산업은 확장 가능한 슬롯으로 준비했습니다.</p>
           </div>
-          <span className="pill">Map-first v0.1</span>
+          <span className="pill">맵 우선 v0.1</span>
         </div>
         <div className="pills">
           {industries.map((industry, index) => (
@@ -155,7 +163,7 @@ export default function Home() {
             <div className="card" key={ticker}>
               <h3>{ticker}</h3>
               <p>{placement}</p>
-              <strong>Strategic fit {fit}</strong>
+              <strong>전략 적합도 {fit}</strong>
             </div>
           ))}
         </div>
@@ -164,18 +172,18 @@ export default function Home() {
       <section id="watchlist" className="section">
         <div className="sectionHead">
           <div>
-            <h2>Watchlist</h2>
-            <p>Human review layer for candidates and watch names.</p>
+            <h2>관심종목</h2>
+            <p>후보와 관망 종목을 사람이 최종 검토하는 영역입니다.</p>
           </div>
         </div>
         <div className="grid two">
           <div className="card">
             <h3>RKLB</h3>
-            <p>Track risk score and value-chain fit before candidate status.</p>
+            <p>후보 편입 전 위험점수와 밸류체인 적합도를 추적합니다.</p>
           </div>
           <div className="card">
             <h3>LMT</h3>
-            <p>Sample benchmark candidate that passes scoring and structural rules.</p>
+            <p>점수와 구조 규칙을 통과한 샘플 기준 후보입니다.</p>
           </div>
         </div>
       </section>
@@ -183,18 +191,18 @@ export default function Home() {
       <section id="journal" className="section">
         <div className="sectionHead">
           <div>
-            <h2>Journal Requirements</h2>
-            <p>Averaging-down and post-sale review gates are explicit workflow requirements.</p>
+            <h2>투자일지 요구사항</h2>
+            <p>물타기와 매도 후 회고는 반드시 기록해야 하는 워크플로우입니다.</p>
           </div>
         </div>
         <div className="grid two">
           <div className="card">
-            <h3>Averaging Down</h3>
-            <p>entry_reason, invalidating_condition, risk_factor, current_emotional_state</p>
+            <h3>물타기 기록</h3>
+            <p>진입 이유, 무효화 조건, 위험 요인, 현재 감정 상태</p>
           </div>
           <div className="card">
-            <h3>Post-Sale Review</h3>
-            <p>sale_reason, thesis_check, invalidating_condition_triggered, next_action_improvement</p>
+            <h3>매도 후 회고</h3>
+            <p>매도 이유, 투자 가설 점검, 무효화 조건 작동 여부, 다음 행동 개선점</p>
           </div>
         </div>
       </section>
@@ -202,22 +210,22 @@ export default function Home() {
       <section id="backtest" className="section">
         <div className="sectionHead">
           <div>
-            <h2>Backtest Stub</h2>
-            <p>Sample structural check only. Real performance validation needs production-grade data.</p>
+            <h2>백테스트 초안</h2>
+            <p>현재는 샘플 구조 검증 단계입니다. 실제 성과 검증은 운영급 데이터가 필요합니다.</p>
           </div>
-          <span className="pill">No performance guarantee</span>
+          <span className="pill">성과 보장 아님</span>
         </div>
         <div className="grid three">
           <div className="metric">
-            <span>Screening</span>
+            <span>스크리닝</span>
             <strong>3d</strong>
           </div>
           <div className="metric">
-            <span>Review</span>
+            <span>검토</span>
             <strong>14d</strong>
           </div>
           <div className="metric">
-            <span>Sample MDD</span>
+            <span>샘플 MDD</span>
             <strong>7.15%</strong>
           </div>
         </div>
