@@ -158,6 +158,17 @@ h1 {
   text-align: center;
 }
 
+.tickerCell {
+  display: grid;
+  gap: 2px;
+}
+
+.tickerCell small {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.25;
+}
+
 .status.pass {
   background: #e8f7ee;
   border-color: #9bd4af;

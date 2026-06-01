@@ -3,6 +3,7 @@ const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:800
 const screeningRows = [
   {
     ticker: "LMT",
+    name: "록히드 마틴",
     status: "candidate",
     total: 86.33,
     quality: 95.83,
@@ -13,6 +14,7 @@ const screeningRows = [
   },
   {
     ticker: "NOC",
+    name: "노스롭 그루먼",
     status: "watch",
     total: 43.5,
     quality: 54.17,
@@ -23,6 +25,7 @@ const screeningRows = [
   },
   {
     ticker: "RKLB",
+    name: "로켓 랩",
     status: "watch",
     total: 19.42,
     quality: 5.56,
@@ -33,6 +36,7 @@ const screeningRows = [
   },
   {
     ticker: "BA",
+    name: "보잉",
     status: "watch",
     total: 36.25,
     quality: 27.78,
@@ -121,7 +125,10 @@ export default function Home() {
           </div>
           {screeningRows.map((row) => (
             <div className="row" role="row" key={row.ticker}>
-              <strong>{row.ticker}</strong>
+              <span className="tickerCell">
+                <strong>{row.ticker}</strong>
+                <small>{row.name}</small>
+              </span>
               <span className={`status ${row.status === "candidate" ? "pass" : "watch"}`}>
                 {statusLabels[row.status]}
               </span>
