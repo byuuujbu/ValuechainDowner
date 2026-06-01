@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8001";
 
@@ -16,6 +16,23 @@ type Dimension = {
   label: string;
   score: number;
   components: Component[];
+};
+
+type Fundamental = {
+  period_end: string;
+  period_type: string;
+  currency: string;
+  revenue: number;
+  operating_income: number;
+  net_income: number;
+  total_assets: number;
+  total_equity: number;
+  total_debt: number;
+  operating_cash_flow: number;
+  capex: number;
+  free_cash_flow: number;
+  shares_outstanding: number;
+  data_source: string;
 };
 
 type Backdata = {
@@ -56,21 +73,7 @@ type Backdata = {
       volume: number;
     }[];
   };
-  fundamentals: {
-    period_end: string;
-    period_type: string;
-    currency: string;
-    revenue: number;
-    operating_income: number;
-    net_income: number;
-    total_assets: number;
-    total_equity: number;
-    total_debt: number;
-    operating_cash_flow: number;
-    capex: number;
-    free_cash_flow: number;
-    shares_outstanding: number;
-  }[];
+  fundamentals: Fundamental[];
   source: {
     provider: string;
     price_file: string;
@@ -131,7 +134,12 @@ export default function AssetBackdataPage({ params }: { params: Promise<{ ticker
     );
   }
 
+  return <AssetBackdata data={data} />;
+}
+
+function AssetBackdata({ data }: { data: Backdata }) {
   const latestFundamental = data.fundamentals[0];
+  const fiscalMeta = useMemo(() => formatFiscalMeta(latestFundamental), [latestFundamental]);
 
   return (
     <main className="shell">
@@ -154,8 +162,11 @@ export default function AssetBackdataPage({ params }: { params: Promise<{ ticker
       <section className="section">
         <div className="sectionHead">
           <div>
-            <h2>최종 판정</h2>
-            <p>{data.decision.reason}</p>
+            <h2>자산 기본정보</h2>
+            <p>
+              {data.asset.market} / {data.asset.sector} / {data.asset.industry} / 기준통화{" "}
+              {data.asset.currency}
+            </p>
           </div>
           <span className={`status ${data.decision.status === "candidate" ? "pass" : "watch"}`}>
             {statusLabels[data.decision.status]}
@@ -171,8 +182,17 @@ export default function AssetBackdataPage({ params }: { params: Promise<{ ticker
             <strong>{data.score.score_confidence}%</strong>
           </div>
           <div className="metric">
-            <span>기준일</span>
+            <span>점수 기준일</span>
             <strong>{data.score.as_of}</strong>
+          </div>
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="sectionHead">
+          <div>
+            <h2>최종 판정</h2>
+            <p>{data.decision.reason}</p>
           </div>
         </div>
       </section>
@@ -256,28 +276,41 @@ export default function AssetBackdataPage({ params }: { params: Promise<{ ticker
           <div>
             <h2>재무 backdata</h2>
             <p>
-              원본 통화는 {latestFundamental.currency}입니다. 원화 백만원 환산은 별도 FX provider 연결 후 확정합니다.
+              아래 재무 수치는 모두 {fiscalMeta} 기준입니다. 원화 백만원 환산은 별도 FX provider 연결 후 확정합니다.
             </p>
           </div>
         </div>
+        <div className="sourceBanner">
+          <strong>기준 재무제표</strong>
+          <span>기준일 {latestFundamental.period_end}</span>
+          <span>기간 {periodTypeLabel(latestFundamental.period_type)}</span>
+          <span>통화 {latestFundamental.currency}</span>
+          <span>출처 {latestFundamental.data_source}</span>
+        </div>
         <div className="grid three">
-          <div className="metric">
-            <span>매출</span>
-            <strong>{formatCompact(latestFundamental.revenue)}</strong>
-          </div>
-          <div className="metric">
-            <span>영업이익</span>
-            <strong>{formatCompact(latestFundamental.operating_income)}</strong>
-          </div>
-          <div className="metric">
-            <span>잉여현금흐름</span>
-            <strong>{formatCompact(latestFundamental.free_cash_flow)}</strong>
-          </div>
+          <FinancialMetric
+            label="매출"
+            value={latestFundamental.revenue}
+            source={fiscalMeta}
+          />
+          <FinancialMetric
+            label="영업이익"
+            value={latestFundamental.operating_income}
+            source={fiscalMeta}
+          />
+          <FinancialMetric
+            label="잉여현금흐름"
+            value={latestFundamental.free_cash_flow}
+            source={fiscalMeta}
+          />
         </div>
         <div className="rawMetricGrid">
           {data.score.raw_metrics.map((metric) => (
             <div key={metric.key}>
-              <span>{metric.label}</span>
+              <span>
+                {metric.label}
+                <small>{metricSourceLabel(metric.key, fiscalMeta, data.score.as_of)}</small>
+              </span>
               <strong>{metric.value === null ? "데이터 없음" : formatNumber(metric.value)}</strong>
             </div>
           ))}
@@ -296,6 +329,46 @@ export default function AssetBackdataPage({ params }: { params: Promise<{ ticker
       </section>
     </main>
   );
+}
+
+function FinancialMetric({
+  label,
+  value,
+  source,
+}: {
+  label: string;
+  value: number;
+  source: string;
+}) {
+  return (
+    <div className="metric financialMetric">
+      <span>{label}</span>
+      <strong>{formatCompact(value)}</strong>
+      <small>{source}</small>
+    </div>
+  );
+}
+
+function formatFiscalMeta(fundamental: Fundamental) {
+  return `${fundamental.period_end} ${periodTypeLabel(fundamental.period_type)} / ${fundamental.currency} / ${fundamental.data_source}`;
+}
+
+function periodTypeLabel(periodType: string) {
+  if (periodType === "annual") return "연간";
+  if (periodType === "quarter") return "분기";
+  return periodType;
+}
+
+function metricSourceLabel(metricKey: string, fiscalMeta: string, priceAsOf: string) {
+  const priceMetrics = new Set([
+    "six_month_return",
+    "momentum_12m_ex_1m",
+    "mdd_1y",
+    "downside_volatility",
+    "avg_trading_value",
+  ]);
+  if (priceMetrics.has(metricKey)) return `가격 기준일 ${priceAsOf}`;
+  return `재무 기준 ${fiscalMeta}`;
 }
 
 function formatNumber(value: number) {
