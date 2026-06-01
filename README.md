@@ -121,6 +121,22 @@ python scripts/generate_sample_market_data.py
 
 주의: 샘플 가격/재무 데이터는 개발 검증용 더미 데이터다. 실제 투자 판단 근거가 아니다.
 
+## 점수 계산
+
+샘플 데이터 기준 개별주 점수 계산과 DB 저장:
+
+```powershell
+python scripts/run_scoring_job.py
+```
+
+저장 대상:
+
+- `calculated_metrics`
+- `scores_daily`
+- `score_logs`
+
+주의: 이 단계는 계산 엔진 검증이다. 후보 가능/관망/제외 판정과 Rule Engine은 아직 구현하지 않았다.
+
 ## 문구 원칙
 
 금지:
