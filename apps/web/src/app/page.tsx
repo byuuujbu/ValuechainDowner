@@ -10,7 +10,10 @@ const screeningRows = [
     trend: 83.33,
     risk: 68.33,
     valuation: 88.33,
-    reason: "점수 기준과 구조 규칙을 통과",
+    reason: "재무 안정성, 추세, 밸류에이션이 모두 기준선을 넘었습니다. 현재 샘플 기준에서는 후보로 검토 가능합니다.",
+    detail:
+      "영업이익률, 자기자본비율, 잉여현금흐름이 우수하게 잡혔고 200일 이동평균 대비 가격 위치도 양호합니다. 다만 방산 대형주 특성상 급격한 성장주는 아니므로 밸류체인 핵심성 중심으로 해석해야 합니다.",
+    backdata: ["영업이익률 상위권", "부채 부담 낮음", "FCF 양호", "200일 추세 우호적"],
   },
   {
     ticker: "NOC",
@@ -21,7 +24,10 @@ const screeningRows = [
     trend: 50,
     risk: 58.33,
     valuation: 20,
-    reason: "종합점수 75 미만, 위험점수 60 미만",
+    reason: "기본 체력은 확인되지만 종합점수와 밸류에이션 점수가 낮아 즉시 후보로 보기 어렵습니다.",
+    detail:
+      "위성·방산 노출도는 높지만 샘플 재무 기준에서 밸류에이션 매력이 부족하고 위험 점수가 기준선에 살짝 못 미칩니다. 가격 또는 실적 개선 근거가 추가될 때까지 관망이 합리적입니다.",
+    backdata: ["밸류에이션 점수 낮음", "위험점수 기준 미달", "추세 중립", "전략 적합도는 높음"],
   },
   {
     ticker: "RKLB",
@@ -32,7 +38,10 @@ const screeningRows = [
     trend: 50,
     risk: 35,
     valuation: 0,
-    reason: "위험점수 60 미만, 밸류에이션 점수 40 미만",
+    reason: "산업 매력은 높지만 손익과 현금흐름 기준에서 아직 후보 편입을 정당화하기 어렵습니다.",
+    detail:
+      "발사체와 위성 제조 노출도는 명확하지만 샘플 재무에서 적자와 음의 현금흐름이 크게 반영됩니다. 성장 스토리만으로 후보가 되지 않도록 관망으로 둡니다.",
+    backdata: ["영업적자", "FCF 음수", "위험점수 낮음", "밸류에이션 산정 불리"],
   },
   {
     ticker: "BA",
@@ -43,7 +52,10 @@ const screeningRows = [
     trend: 16.67,
     risk: 38.33,
     valuation: 60,
-    reason: "퀄리티, 추세, 위험 기준 미달",
+    reason: "밸류에이션 일부는 괜찮지만 퀄리티, 추세, 위험 점수가 동시에 기준선을 밑돕니다.",
+    detail:
+      "우주 관련 사업은 있으나 전체 기업 관점에서는 항공기 품질 이슈와 재무 변동성이 더 크게 반영됩니다. 구조적 회복 신호가 확인되기 전까지 관망으로 두는 판단입니다.",
+    backdata: ["퀄리티 낮음", "추세 약함", "위험점수 낮음", "우주 순수 노출도 제한"],
   },
 ];
 
@@ -65,11 +77,41 @@ const chainNodes = [
 ];
 
 const companies = [
-  ["RKLB", "발사체 + 위성 + 적용", "88"],
-  ["LMT", "위성 + 적용", "82"],
-  ["NOC", "위성 + 지상국", "80"],
-  ["BA", "발사체 + 적용", "65"],
+  {
+    ticker: "RKLB",
+    placement: "발사체 + 위성 + 적용",
+    fit: 88,
+    evidence:
+      "Rocket Lab의 Electron 발사 서비스, Photon 위성 플랫폼, 우주 시스템 사업 구성을 기준으로 발사체와 위성 제조 노드에 우선 배치했습니다.",
+  },
+  {
+    ticker: "LMT",
+    placement: "위성 + 정부 적용",
+    fit: 82,
+    evidence:
+      "Lockheed Martin의 군사·정부 우주 시스템, 위성 제조, 미사일·방산 고객 기반을 기준으로 위성과 정부 적용 노드에 배치했습니다.",
+  },
+  {
+    ticker: "NOC",
+    placement: "위성 + 지상국",
+    fit: 80,
+    evidence:
+      "Northrop Grumman의 위성, 우주 방산 시스템, 지상·통신 인프라 관련 사업 노출을 기준으로 위성 및 지상국 노드에 배치했습니다.",
+  },
+  {
+    ticker: "BA",
+    placement: "발사체 + 정부 적용",
+    fit: 65,
+    evidence:
+      "Boeing의 우주·방산 사업과 발사체/우주선 참여 이력은 반영했지만, 전체 기업에서 상업 항공 비중이 크므로 적합도는 낮게 두었습니다.",
+  },
 ];
+
+function scoreClass(value: number) {
+  if (value >= 75) return "score good";
+  if (value >= 50) return "score mid";
+  return "score low";
+}
 
 export default function Home() {
   return (
@@ -122,6 +164,7 @@ export default function Home() {
             <span>종합</span>
             <span>점수 세부</span>
             <span>판단 사유</span>
+            <span>근거</span>
           </div>
           {screeningRows.map((row) => (
             <div className="row" role="row" key={row.ticker}>
@@ -132,12 +175,48 @@ export default function Home() {
               <span className={`status ${row.status === "candidate" ? "pass" : "watch"}`}>
                 {statusLabels[row.status]}
               </span>
-              <span>{row.total}</span>
-              <span>
-                퀄 {row.quality} / 추세 {row.trend} / 위험 {row.risk} / 밸류 {row.valuation}
+              <strong>{row.total}</strong>
+              <span className="scoreSet">
+                <span className={scoreClass(row.quality)}>퀄 {row.quality}</span>
+                <span className={scoreClass(row.trend)}>추세 {row.trend}</span>
+                <span className={scoreClass(row.risk)}>위험 {row.risk}</span>
+                <span className={scoreClass(row.valuation)}>밸류 {row.valuation}</span>
               </span>
               <span>{row.reason}</span>
+              <a className="textLink" href={`#detail-${row.ticker}`}>
+                상세
+              </a>
             </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="sectionHead">
+          <div>
+            <h2>점수 산정 근거</h2>
+            <p>현재는 샘플 데이터 기반 설명입니다. 실사용 단계에서는 클릭 시 원천 가격·재무·환율 데이터 화면으로 분리합니다.</p>
+          </div>
+          <span className="pill">상세 화면 예정</span>
+        </div>
+        <div className="grid two">
+          {screeningRows.map((row) => (
+            <article className="card detailCard" id={`detail-${row.ticker}`} key={row.ticker}>
+              <div className="cardTitle">
+                <h3>
+                  {row.ticker} <small>{row.name}</small>
+                </h3>
+                <span className={`status ${row.status === "candidate" ? "pass" : "watch"}`}>
+                  {statusLabels[row.status]}
+                </span>
+              </div>
+              <p>{row.detail}</p>
+              <div className="evidenceList">
+                {row.backdata.map((item) => (
+                  <span key={item}>{item}</span>
+                ))}
+              </div>
+            </article>
           ))}
         </div>
       </section>
@@ -166,11 +245,12 @@ export default function Home() {
           ))}
         </div>
         <div className="grid two">
-          {companies.map(([ticker, placement, fit]) => (
-            <div className="card" key={ticker}>
-              <h3>{ticker}</h3>
-              <p>{placement}</p>
-              <strong>전략 적합도 {fit}</strong>
+          {companies.map((company) => (
+            <div className="card" key={company.ticker}>
+              <h3>{company.ticker}</h3>
+              <p>{company.placement}</p>
+              <strong>전략 적합도 {company.fit}</strong>
+              <p className="evidenceText">{company.evidence}</p>
             </div>
           ))}
         </div>
