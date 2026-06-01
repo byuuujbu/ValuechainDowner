@@ -1,88 +1,88 @@
 # Objective Value-chain Stock Agent
 
-OVSA는 투자 추천/자문/일임/자동매매 서비스가 아니다. 객관 지표 기반 후보 검토, 기록, 리스크 점검, 감정매매 방지를 돕는 리서치 보조 도구다.
+OVSA is a research-assistant MVP for value-chain based stock screening. It is not an investment recommendation, advisory, alarm, or automated trading service.
 
-## Phase 1 범위
+## Current Scope
 
-포함:
+Implemented:
 
-- `apps/web`: Next.js + TypeScript
-- `apps/api`: FastAPI + Python
-- PostgreSQL Docker Compose
-- `.env.example`
+- Next.js web dashboard at `apps/web`
+- FastAPI backend at `apps/api`
+- PostgreSQL Docker Compose setup
 - `GET /health`
-- 로컬 실행 방법
+- SQLAlchemy/Alembic schema for assets, value-chain maps, prices, fundamentals, scores, rules, journals, portfolios, and backtests
+- Sample CSV data provider
+- Common-stock scoring engine
+- KRW million display conversion helper for foreign financial data
+- Rule engine for candidate/watch/exclude status
+- Multi-industry map foundation with reviewed Space seed map
+- Watchlist and journal requirement surfaces
+- Sample structural backtest endpoint
+- Discord command preview script without bot token access
 
-제외:
+Excluded from the MVP:
 
-- 점수 계산
-- Rule Engine
-- 산업맵 UI
-- 관심종목
-- 투자일지
-- 백테스트
-- Discord
+- Live market/fundamental data provider
+- Brokerage connection or order execution
+- Real Discord bot deployment
+- Investment recommendation wording
+- AI-driven company relocation or value-chain restructuring
 
-## 요구사항
+## Default Ports
 
-- Node.js 20+
-- Python 3.11+
-- Docker Desktop
-
-## 기본 포트
-
-OpenHands 등 다른 로컬 도구와 충돌하지 않도록 OVSA는 다음 포트를 기본으로 사용한다.
+OpenHands or other local tools may already use `3000`, so this project defaults to:
 
 - Web: `3001`
 - API: `8001`
 - PostgreSQL: `5433`
 
-## 로컬 실행
+## Local Setup
 
 ```powershell
 Copy-Item .env.example .env
 npm install
 python -m venv .venv
-.\\.venv\\Scripts\\Activate.ps1
-python -m pip install -e .\\apps\\api[dev]
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e .\apps\api[dev]
 docker compose up db
 ```
 
-별도 터미널에서 API:
+Run API:
 
 ```powershell
 npm run dev:api
 ```
 
-별도 터미널에서 Web:
+Run Web:
 
 ```powershell
 npm run dev:web
 ```
 
-접속:
+Open:
 
 - Web: <http://localhost:3001>
 - API health: <http://localhost:8001/health>
 
-## Docker 실행
+## Docker
 
 ```powershell
 Copy-Item .env.example .env
 docker compose up --build
 ```
 
-## 검증
+## Verification
 
 ```powershell
-npm run lint:web
 npm run build:web
-npm run test:api
+cd apps/api
+python -m pytest
+python -m ruff check . ..\..\scripts
 ```
 
-## DB 마이그레이션
+## Database
 
-Docker 실행 후:
+After Docker is running:
 
 ```powershell
 docker compose exec api alembic upgrade head
@@ -90,7 +90,7 @@ python scripts/seed_space_industry.py
 python scripts/load_sample_assets.py
 ```
 
-로컬 Python으로 migration 실행:
+Local migration:
 
 ```powershell
 cd apps/api
@@ -98,76 +98,112 @@ alembic upgrade head
 cd ../..
 ```
 
-## 샘플 데이터
+## Sample Data
 
-샘플 데이터 생성:
+Generate sample data:
 
 ```powershell
 python scripts/generate_sample_market_data.py
 ```
 
-생성 파일:
+Files:
 
 - `data/sample/assets.csv`
 - `data/sample/price_daily_sample.csv`
 - `data/sample/fundamentals_sample.csv`
 
-샘플 Provider:
+Provider interfaces:
 
 - `SampleCsvDataProvider`
 - `MarketDataProvider`
 - `FundamentalDataProvider`
 - `AssetReferenceProvider`
 
-주의: 샘플 가격/재무 데이터는 개발 검증용 더미 데이터다. 실제 투자 판단 근거가 아니다.
+Sample data is deterministic development data. It is not evidence for a real investment decision.
 
-## 점수 계산
+## Scoring
 
-샘플 데이터 기준 개별주 점수 계산과 DB 저장:
+Run sample common-stock scoring and persist results:
 
 ```powershell
 python scripts/run_scoring_job.py
 ```
 
-저장 대상:
+Persisted tables:
 
 - `calculated_metrics`
 - `scores_daily`
 - `score_logs`
 
-주의: 이 단계는 계산 엔진 검증이다. 후보 가능/관망/제외 판정과 Rule Engine은 아직 구현하지 않았다.
+Scoring dimensions:
 
-## 원화 백만원 환산
+- Quality: 30%
+- Trend: 25%
+- Risk: 15%
+- Valuation: 30%
 
-해외 기업 원천 재무 데이터는 USD 기준으로 보존한다. 원화 확인은 별도 환산 helper를 사용한다.
+Low-quality assets receive a valuation cap. Scoring uses source currency data; KRW conversion is display/audit only.
+
+## KRW Million Conversion
+
+Foreign fundamentals are preserved in source currency, normally USD. KRW million display is handled separately:
 
 ```powershell
 python scripts/preview_fundamentals_krw.py
 ```
 
-주의:
+Notes:
 
-- 샘플 preview는 개발용 고정 환율 `USD/KRW=1350`을 쓴다.
-- 실제 환율은 후속 FX Provider 또는 사용자 입력값으로 공급해야 한다.
-- LLM이 환율이나 재무 숫자를 추정하지 않는다.
-- 점수 계산은 원천 데이터 기준이며, KRW 백만원 환산값은 표시/검토용이다.
+- The sample preview uses a fixed development rate, `USD/KRW=1350`.
+- Production FX rates must come from a provider or user input.
+- The LLM must not guess exchange rates or financial numbers.
 
-## 문구 원칙
+## Rule Engine
 
-금지:
+Evaluate candidate/watch/exclude status:
 
-- 매수 추천
-- 매도 추천
-- 사세요
-- 파세요
-- 수익 가능성
-- 상승 확률
-- 목표가
+```powershell
+python scripts/evaluate_rules.py
+```
 
-허용:
+Implemented gates:
 
-- 후보 가능
-- 관망
-- 제외
-- 투자일지 작성 필요
-- 최종 판단은 사용자 책임
+- Minimum total, quality, trend, risk, valuation, and confidence scores
+- Exclude after short-term surge events
+- Watch flag for large one-day US-stock moves
+
+## API Endpoints
+
+- `GET /health`
+- `GET /screening/results`
+- `GET /industries`
+- `GET /industries/space/value-chain`
+- `GET /watchlist`
+- `GET /journals/requirements`
+- `POST /backtests/run`
+
+## Discord Preview
+
+```powershell
+python scripts/discord_command_preview.py
+```
+
+This only prints a sample command response. It does not access Discord credentials.
+
+## Copy Rules
+
+Allowed wording:
+
+- candidate
+- watch
+- exclude
+- journal required
+- final judgment remains user responsibility
+
+Forbidden wording:
+
+- buy recommendation
+- sell recommendation
+- target price
+- guaranteed return
+- upside probability

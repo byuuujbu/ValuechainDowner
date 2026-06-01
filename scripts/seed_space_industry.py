@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import uuid
 from collections.abc import Iterable
 from pathlib import Path
 import sys
+import uuid
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 API_ROOT = PROJECT_ROOT / "apps" / "api"
@@ -19,13 +19,13 @@ from app.db.schema import industries, value_chain_nodes  # noqa: E402
 SPACE_INDUSTRY_ID = "11111111-1111-1111-1111-111111111111"
 
 SPACE_NODES = [
-    ("소재/부품", "우주 산업에 쓰이는 핵심 소재와 부품 공급 단계"),
-    ("추진체/엔진", "발사체와 우주 시스템의 추진 기술 단계"),
-    ("발사체", "위성 및 화물을 궤도에 올리는 발사 서비스 단계"),
-    ("위성 제조", "위성 본체와 탑재체 제조 단계"),
-    ("지상국/통신", "위성 관제, 지상국, 통신 인프라 단계"),
-    ("우주 데이터", "위성 데이터 수집, 처리, 분석 단계"),
-    ("국방/상업/탐사 응용", "우주 기반 국방, 상업, 탐사 응용 단계"),
+    ("Materials/Parts", "Material and component suppliers for space systems."),
+    ("Propulsion/Engines", "Propulsion technology for launch vehicles and spacecraft."),
+    ("Launch", "Launch services that place satellites and payloads into orbit."),
+    ("Satellite Manufacturing", "Satellite body and payload manufacturing."),
+    ("Ground/Communication", "Ground stations and communication infrastructure."),
+    ("Space Data", "Satellite data collection, processing, and analytics."),
+    ("Government/Commercial Applications", "Space-based defense, commercial, and enterprise use cases."),
 ]
 
 
@@ -35,17 +35,30 @@ def deterministic_id(namespace: str, value: str) -> str:
 
 def seed_space_industry(engine: Engine) -> None:
     with engine.begin() as connection:
-        existing = connection.execute(
-            select(industries.c.id).where(industries.c.name == "우주")
+        existing_by_id = connection.execute(
+            select(industries.c.id).where(industries.c.id == SPACE_INDUSTRY_ID)
+        ).scalar_one_or_none()
+        existing_by_name = connection.execute(
+            select(industries.c.id).where(industries.c.name == "Space")
         ).scalar_one_or_none()
 
-        industry_id = existing or SPACE_INDUSTRY_ID
-        if existing is None:
+        industry_id = existing_by_id or existing_by_name or SPACE_INDUSTRY_ID
+        if existing_by_id is not None or existing_by_name is not None:
+            connection.execute(
+                industries.update()
+                .where(industries.c.id == industry_id)
+                .values(
+                    name="Space",
+                    description="Reviewed seed industry for OVSA v0.1.",
+                    is_active=True,
+                )
+            )
+        else:
             connection.execute(
                 industries.insert().values(
                     id=industry_id,
-                    name="우주",
-                    description="OVSA v0.1에서 우선 상세 구현하는 산업",
+                    name="Space",
+                    description="Reviewed seed industry for OVSA v0.1.",
                     is_active=True,
                 )
             )

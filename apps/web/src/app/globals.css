@@ -21,3 +21,206 @@ body {
 a {
   color: inherit;
 }
+
+.shell {
+  margin: 0 auto;
+  max-width: 1180px;
+  padding: 28px;
+}
+
+.topbar {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 18px;
+}
+
+.eyebrow {
+  color: var(--muted);
+  margin: 0 0 6px;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  font-size: 36px;
+  margin-bottom: 0;
+}
+
+.apiBox,
+.section,
+.card,
+.metric {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.apiBox {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+}
+
+.apiBox span,
+.sectionHead p,
+.metric span {
+  color: var(--muted);
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.tabs a,
+.pill,
+.status {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 12px;
+  text-decoration: none;
+}
+
+.tabs a,
+.pill {
+  background: #ffffff;
+}
+
+.section {
+  margin-bottom: 16px;
+  padding: 20px;
+}
+
+.sectionHead {
+  align-items: end;
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 16px;
+}
+
+.grid {
+  display: grid;
+  gap: 12px;
+}
+
+.grid.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.grid.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.metric {
+  padding: 16px;
+}
+
+.metric strong {
+  display: block;
+  font-size: 28px;
+  margin-top: 8px;
+}
+
+.table {
+  display: grid;
+  margin-top: 14px;
+  overflow-x: auto;
+}
+
+.row {
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 80px 100px 80px 180px minmax(260px, 1fr);
+  min-width: 860px;
+  padding: 12px 0;
+}
+
+.row.header {
+  border-top: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.status {
+  display: inline-block;
+  padding: 4px 8px;
+  text-align: center;
+}
+
+.status.pass {
+  background: #e8f7ee;
+  border-color: #9bd4af;
+}
+
+.status.watch {
+  background: #fff7e6;
+  border-color: #e5c373;
+}
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.pill.active {
+  background: #e8f0ff;
+  border-color: #91b3f2;
+}
+
+.chain {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(7, minmax(120px, 1fr));
+  margin-bottom: 14px;
+  overflow-x: auto;
+}
+
+.node {
+  background: #f0f4f8;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  min-height: 72px;
+  padding: 12px;
+}
+
+.card {
+  padding: 16px;
+}
+
+.card p,
+.notice p {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.checklist {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 0;
+}
+
+@media (max-width: 760px) {
+  .topbar,
+  .sectionHead {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .grid.two,
+  .grid.three {
+    grid-template-columns: 1fr;
+  }
+}

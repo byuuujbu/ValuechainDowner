@@ -7,8 +7,16 @@ from pathlib import Path
 
 from app.data_providers.interfaces import AssetProfile, DailyPrice, FundamentalsPeriod
 
-PROJECT_ROOT = Path(__file__).resolve().parents[4]
-DEFAULT_SAMPLE_DIR = PROJECT_ROOT / "data" / "sample"
+
+def _default_sample_dir() -> Path:
+    for parent in Path(__file__).resolve().parents:
+        sample_dir = parent / "data" / "sample"
+        if sample_dir.exists():
+            return sample_dir
+    return Path("data") / "sample"
+
+
+DEFAULT_SAMPLE_DIR = _default_sample_dir()
 
 
 class SampleCsvDataProvider:
