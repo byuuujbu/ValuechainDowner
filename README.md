@@ -80,6 +80,24 @@ npm run build:web
 npm run test:api
 ```
 
+## DB 마이그레이션
+
+Docker 실행 후:
+
+```powershell
+docker compose exec api alembic upgrade head
+python scripts/seed_space_industry.py
+python scripts/load_sample_assets.py
+```
+
+로컬 Python으로 migration 실행:
+
+```powershell
+cd apps/api
+alembic upgrade head
+cd ../..
+```
+
 ## 문구 원칙
 
 금지:

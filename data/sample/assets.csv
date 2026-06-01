@@ -1,0 +1,11 @@
+ticker,name,market,country,currency,asset_type,sector,industry,is_etf
+RKLB,Rocket Lab,US,United States,USD,common_stock,Industrials,Space,false
+LMT,Lockheed Martin,US,United States,USD,common_stock,Industrials,Aerospace & Defense,false
+NOC,Northrop Grumman,US,United States,USD,common_stock,Industrials,Aerospace & Defense,false
+BA,Boeing,US,United States,USD,common_stock,Industrials,Aerospace & Defense,false
+SPY,SPDR S&P 500 ETF Trust,US,United States,USD,etf,ETF,Broad Market,true
+QQQ,Invesco QQQ Trust,US,United States,USD,etf,ETF,Nasdaq 100,true
+KODEX200,KODEX 200,KR,South Korea,KRW,etf,ETF,KOSPI 200,true
+KODEXKOSDAQ150,KODEX 코스닥150,KR,South Korea,KRW,etf,ETF,KOSDAQ 150,true
+GOLD_PROXY,Gold Proxy,GLOBAL,Global,USD,commodity_proxy,Commodity,Gold,true
+BTC_PROXY,Bitcoin Proxy,GLOBAL,Global,USD,crypto_proxy,Crypto,Bitcoin,true

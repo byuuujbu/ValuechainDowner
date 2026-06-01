@@ -10,7 +10,15 @@ class Settings(BaseSettings):
     postgres_host: str = "localhost"
     postgres_port: int = 5432
 
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=("../../.env", ".env"), extra="ignore")
 
 
 settings = Settings()
+
+
+def get_database_url() -> str:
+    return (
+        "postgresql+psycopg://"
+        f"{settings.postgres_user}:{settings.postgres_password}"
+        f"@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
+    )
