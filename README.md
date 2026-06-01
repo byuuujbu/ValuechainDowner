@@ -98,6 +98,29 @@ alembic upgrade head
 cd ../..
 ```
 
+## 샘플 데이터
+
+샘플 데이터 생성:
+
+```powershell
+python scripts/generate_sample_market_data.py
+```
+
+생성 파일:
+
+- `data/sample/assets.csv`
+- `data/sample/price_daily_sample.csv`
+- `data/sample/fundamentals_sample.csv`
+
+샘플 Provider:
+
+- `SampleCsvDataProvider`
+- `MarketDataProvider`
+- `FundamentalDataProvider`
+- `AssetReferenceProvider`
+
+주의: 샘플 가격/재무 데이터는 개발 검증용 더미 데이터다. 실제 투자 판단 근거가 아니다.
+
 ## 문구 원칙
 
 금지:

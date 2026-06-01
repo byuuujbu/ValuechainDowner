@@ -1,0 +1,11 @@
+.git
+.env
+node_modules
+apps/web/.next
+apps/web/node_modules
+apps/api/.pytest_cache
+apps/api/.ruff_cache
+apps/api/**/*.pyc
+apps/api/**/__pycache__
+apps/api/*.egg-info
+**/*.tsbuildinfo
