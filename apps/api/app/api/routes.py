@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from app.data_providers import SampleCsvDataProvider
 from app.rules import RuleEngine
 from app.scoring import CommonStockScoringEngine
+from app.services.asset_backdata import get_asset_backdata
 from app.services.backtest import run_sample_backtest
 from app.services.journal import JOURNAL_REQUIREMENTS, WATCHLIST
 from app.services.space_map import INDUSTRIES, SPACE_MAP
@@ -39,6 +40,14 @@ def screening_results() -> dict[str, object]:
             }
         )
     return {"items": rows}
+
+
+@router.get("/assets/{ticker}/backdata")
+def asset_backdata(ticker: str) -> dict[str, object]:
+    try:
+        return get_asset_backdata(ticker)
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
 
 
 @router.get("/industries")

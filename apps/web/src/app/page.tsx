@@ -183,8 +183,8 @@ export default function Home() {
                 <span className={scoreClass(row.valuation)}>밸류 {row.valuation}</span>
               </span>
               <span>{row.reason}</span>
-              <a className="textLink" href={`#detail-${row.ticker}`}>
-                상세
+              <a className="textLink" href={`/assets/${row.ticker}`}>
+                상세 화면
               </a>
             </div>
           ))}

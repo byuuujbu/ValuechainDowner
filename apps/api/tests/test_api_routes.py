@@ -34,3 +34,15 @@ def test_watchlist_journal_and_backtest_endpoints() -> None:
     assert any(item["type"] == "post_sale_review" for item in journals)
     assert backtest["screening_cadence_days"] == 3
     assert backtest["rebalancing_review_cadence_days"] == 14
+
+
+def test_asset_backdata_endpoint_exposes_source_inputs() -> None:
+    response = client.get("/assets/RKLB/backdata")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["asset"]["ticker"] == "RKLB"
+    assert payload["score"]["total_score"] == 19.4167
+    assert payload["price_summary"]["rows"] == 260
+    assert payload["fundamentals"][0]["currency"] == "USD"
+    assert payload["source"]["provider"] == "SampleCsvDataProvider"
