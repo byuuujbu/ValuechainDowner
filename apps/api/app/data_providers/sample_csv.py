@@ -92,6 +92,7 @@ class SampleCsvDataProvider:
                 FundamentalsPeriod(
                     ticker=row["ticker"],
                     market=row["market"],
+                    currency=row.get("currency") or None,
                     period_end=date.fromisoformat(row["period_end"]),
                     period_type=row["period_type"],
                     revenue=_decimal_or_none(row["revenue"]),

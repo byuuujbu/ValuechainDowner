@@ -113,6 +113,7 @@ def write_fundamentals(assets: list[dict[str, str]]) -> None:
     fieldnames = [
         "ticker",
         "market",
+        "currency",
         "period_end",
         "period_type",
         "revenue",
@@ -129,11 +130,13 @@ def write_fundamentals(assets: list[dict[str, str]]) -> None:
     ]
     rows: list[dict[str, str]] = []
     market_by_ticker = {asset["ticker"]: asset["market"] for asset in assets}
+    currency_by_ticker = {asset["ticker"]: asset["currency"] for asset in assets}
     for ticker, values in FUNDAMENTALS.items():
         rows.append(
             {
                 "ticker": ticker,
                 "market": market_by_ticker[ticker],
+                "currency": currency_by_ticker[ticker],
                 "period_end": "2025-12-31",
                 "period_type": "annual",
                 "revenue": str(values[0]),

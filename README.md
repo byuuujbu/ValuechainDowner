@@ -137,6 +137,21 @@ python scripts/run_scoring_job.py
 
 주의: 이 단계는 계산 엔진 검증이다. 후보 가능/관망/제외 판정과 Rule Engine은 아직 구현하지 않았다.
 
+## 원화 백만원 환산
+
+해외 기업 원천 재무 데이터는 USD 기준으로 보존한다. 원화 확인은 별도 환산 helper를 사용한다.
+
+```powershell
+python scripts/preview_fundamentals_krw.py
+```
+
+주의:
+
+- 샘플 preview는 개발용 고정 환율 `USD/KRW=1350`을 쓴다.
+- 실제 환율은 후속 FX Provider 또는 사용자 입력값으로 공급해야 한다.
+- LLM이 환율이나 재무 숫자를 추정하지 않는다.
+- 점수 계산은 원천 데이터 기준이며, KRW 백만원 환산값은 표시/검토용이다.
+
 ## 문구 원칙
 
 금지:

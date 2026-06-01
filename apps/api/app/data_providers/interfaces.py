@@ -38,6 +38,7 @@ class DailyPrice:
 class FundamentalsPeriod:
     ticker: str
     market: str
+    currency: str | None
     period_end: date
     period_type: str
     revenue: Decimal | None
