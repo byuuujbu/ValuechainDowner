@@ -29,6 +29,14 @@ OVSA는 투자 추천/자문/일임/자동매매 서비스가 아니다. 객관 
 - Python 3.11+
 - Docker Desktop
 
+## 기본 포트
+
+OpenHands 등 다른 로컬 도구와 충돌하지 않도록 OVSA는 다음 포트를 기본으로 사용한다.
+
+- Web: `3001`
+- API: `8001`
+- PostgreSQL: `5433`
+
 ## 로컬 실행
 
 ```powershell
@@ -54,8 +62,8 @@ npm run dev:web
 
 접속:
 
-- Web: <http://localhost:3000>
-- API health: <http://localhost:8000/health>
+- Web: <http://localhost:3001>
+- API health: <http://localhost:8001/health>
 
 ## Docker 실행
 
