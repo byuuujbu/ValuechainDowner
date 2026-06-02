@@ -35,6 +35,66 @@ type Fundamental = {
   data_source: string;
 };
 
+type SecSource = {
+  tag: string;
+  unit: string;
+  period_end: string;
+  fiscal_year: number | null;
+  filed: string | null;
+  form: string | null;
+  accession: string | null;
+  frame: string | null;
+  original_value: string | null;
+  normalized_value: string | null;
+};
+
+type SecFundamentalRow = {
+  ticker: string;
+  market: string;
+  currency: string;
+  period_end: string;
+  period_type: string;
+  revenue: string | null;
+  operating_income: string | null;
+  net_income: string | null;
+  total_assets: string | null;
+  total_equity: string | null;
+  total_debt: string | null;
+  operating_cash_flow: string | null;
+  capex: string | null;
+  free_cash_flow: string | null;
+  shares_outstanding: string | null;
+  data_source: string;
+  source_metadata: Record<string, SecSource | SecSource[]>;
+};
+
+type SecNumericKey =
+  | "revenue"
+  | "operating_income"
+  | "net_income"
+  | "total_assets"
+  | "total_equity"
+  | "total_debt"
+  | "operating_cash_flow"
+  | "capex"
+  | "free_cash_flow"
+  | "shares_outstanding";
+
+type SecFundamentalsResponse = {
+  ticker: string;
+  provider: string;
+  configured: boolean;
+  normalized_fundamentals: {
+    ok: boolean;
+    cik?: string;
+    entity_name?: string;
+    row_count?: number;
+    rows?: SecFundamentalRow[];
+    normalization_notes?: string[];
+    message?: string;
+  };
+};
+
 type Backdata = {
   asset: {
     ticker: string;
@@ -92,6 +152,7 @@ const statusLabels: Record<string, string> = {
 export default function AssetBackdataPage({ params }: { params: Promise<{ ticker: string }> }) {
   const [ticker, setTicker] = useState("");
   const [data, setData] = useState<Backdata | null>(null);
+  const [secData, setSecData] = useState<SecFundamentalsResponse | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -107,6 +168,17 @@ export default function AssetBackdataPage({ params }: { params: Promise<{ ticker
       })
       .then((payload: Backdata) => setData(payload))
       .catch((fetchError: Error) => setError(fetchError.message));
+  }, [ticker]);
+
+  useEffect(() => {
+    if (!ticker) return;
+    fetch(`${apiBaseUrl}/data-providers/sec/${ticker}/fundamentals`)
+      .then((response) => {
+        if (!response.ok) throw new Error(`SEC API 응답 실패: ${response.status}`);
+        return response.json();
+      })
+      .then((payload: SecFundamentalsResponse) => setSecData(payload))
+      .catch(() => setSecData(null));
   }, [ticker]);
 
   if (error) {
@@ -134,12 +206,22 @@ export default function AssetBackdataPage({ params }: { params: Promise<{ ticker
     );
   }
 
-  return <AssetBackdata data={data} />;
+  return <AssetBackdata data={data} secData={secData} />;
 }
 
-function AssetBackdata({ data }: { data: Backdata }) {
+function AssetBackdata({
+  data,
+  secData,
+}: {
+  data: Backdata;
+  secData: SecFundamentalsResponse | null;
+}) {
   const latestFundamental = data.fundamentals[0];
   const fiscalMeta = useMemo(() => formatFiscalMeta(latestFundamental), [latestFundamental]);
+  const secRows = secData?.normalized_fundamentals.ok
+    ? secData.normalized_fundamentals.rows ?? []
+    : [];
+  const latestSecFundamental = secRows[secRows.length - 1];
 
   return (
     <main className="shell">
@@ -317,6 +399,74 @@ function AssetBackdata({ data }: { data: Backdata }) {
         </div>
       </section>
 
+      {latestSecFundamental ? (
+        <section className="section">
+          <div className="sectionHead">
+            <div>
+              <h2>SEC 원천 재무</h2>
+              <p>
+                SEC EDGAR companyfacts에서 가져온 10-K 기반 연간 재무입니다. 숫자별 XBRL 태그,
+                제출일, 접수번호를 함께 보존합니다.
+              </p>
+            </div>
+          </div>
+          <div className="sourceBanner">
+            <strong>{secData?.normalized_fundamentals.entity_name}</strong>
+            <span>CIK {secData?.normalized_fundamentals.cik}</span>
+            <span>최신 기준일 {latestSecFundamental.period_end}</span>
+            <span>출처 {latestSecFundamental.data_source}</span>
+          </div>
+          <div className="grid three">
+            <FinancialMetric
+              label="SEC 매출"
+              value={toNumber(latestSecFundamental.revenue)}
+              source={secSourceSummary(latestSecFundamental, "revenue")}
+            />
+            <FinancialMetric
+              label="SEC 영업현금흐름"
+              value={toNumber(latestSecFundamental.operating_cash_flow)}
+              source={secSourceSummary(latestSecFundamental, "operating_cash_flow")}
+            />
+            <FinancialMetric
+              label="SEC 잉여현금흐름"
+              value={toNumber(latestSecFundamental.free_cash_flow)}
+              source="영업현금흐름 + 정규화 CAPEX"
+            />
+          </div>
+          <div className="compactTable">
+            <div className="compactRow header">
+              <span>기준일</span>
+              <span>매출</span>
+              <span>영업이익</span>
+              <span>순이익</span>
+              <span>FCF</span>
+              <span>접수번호</span>
+            </div>
+            {secRows.map((row) => (
+              <div className="compactRow" key={row.period_end}>
+                <span>{row.period_end}</span>
+                <span>{formatMaybeCompact(row.revenue)}</span>
+                <span>{formatMaybeCompact(row.operating_income)}</span>
+                <span>{formatMaybeCompact(row.net_income)}</span>
+                <span>{formatMaybeCompact(row.free_cash_flow)}</span>
+                <span>{firstAccession(row)}</span>
+              </div>
+            ))}
+          </div>
+          <div className="rawMetricGrid">
+            {secEvidenceFields.map((field) => (
+              <div key={field.key}>
+                <span>
+                  {field.label}
+                  <small>{secSourceSummary(latestSecFundamental, field.key)}</small>
+                </span>
+                <strong>{formatMaybeCompact(latestSecFundamental[field.key])}</strong>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       <section className="section">
         <h2>데이터 출처</h2>
         <p>{data.source.notice}</p>
@@ -337,16 +487,53 @@ function FinancialMetric({
   source,
 }: {
   label: string;
-  value: number;
+  value: number | null;
   source: string;
 }) {
   return (
     <div className="metric financialMetric">
       <span>{label}</span>
-      <strong>{formatCompact(value)}</strong>
+      <strong>{value === null ? "데이터 없음" : formatCompact(value)}</strong>
       <small>{source}</small>
     </div>
   );
+}
+
+const secEvidenceFields: { key: SecNumericKey; label: string }[] = [
+  { key: "revenue", label: "매출" },
+  { key: "operating_income", label: "영업이익" },
+  { key: "net_income", label: "순이익" },
+  { key: "total_assets", label: "총자산" },
+  { key: "total_equity", label: "자기자본" },
+  { key: "total_debt", label: "총부채" },
+  { key: "operating_cash_flow", label: "영업현금흐름" },
+  { key: "capex", label: "CAPEX" },
+  { key: "shares_outstanding", label: "주식수" },
+];
+
+function secSourceSummary(row: SecFundamentalRow, key: SecNumericKey) {
+  const source = row.source_metadata[String(key)];
+  if (!source) return "SEC 원천 없음";
+  const firstSource = Array.isArray(source) ? source[0] : source;
+  return `${firstSource.tag} / ${firstSource.form ?? "form 없음"} / ${firstSource.filed ?? "제출일 없음"} / ${firstSource.accession ?? "접수번호 없음"}`;
+}
+
+function firstAccession(row: SecFundamentalRow) {
+  const source = row.source_metadata.revenue;
+  if (!source) return "접수번호 없음";
+  const firstSource = Array.isArray(source) ? source[0] : source;
+  return firstSource.accession ?? "접수번호 없음";
+}
+
+function toNumber(value: string | number | null) {
+  if (value === null) return null;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function formatMaybeCompact(value: string | number | null) {
+  const numeric = toNumber(value);
+  return numeric === null ? "데이터 없음" : formatCompact(numeric);
 }
 
 function formatFiscalMeta(fundamental: Fundamental) {
