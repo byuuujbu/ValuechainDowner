@@ -146,6 +146,8 @@ Notes:
 - `FMP_API_KEY` is required before Financial Modeling Prep calls are made.
 - `SEC_USER_AGENT` is required before SEC EDGAR calls are made.
 - `/data-providers/status` reports whether providers are configured without exposing secrets.
+- `/data-providers/fmp/{ticker}/diagnostics` checks profile, price, and fundamental fetches
+  for one ticker without changing the dashboard data source.
 - If credentials are absent, existing sample-data screens continue to work.
 
 ## Scoring
@@ -203,6 +205,7 @@ Implemented gates:
 
 - `GET /health`
 - `GET /data-providers/status`
+- `GET /data-providers/fmp/{ticker}/diagnostics`
 - `GET /screening/results`
 - `GET /industries`
 - `GET /industries/space/value-chain`

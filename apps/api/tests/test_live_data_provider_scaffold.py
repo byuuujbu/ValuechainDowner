@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from app.data_providers.fmp import FinancialModelingPrepProvider
 from app.data_providers.sec_edgar import latest_annual_fact, normalize_cik
 from app.main import app
+from app.services.live_data_diagnostics import _capture, _redact_sensitive_url_params
 
 
 def test_data_provider_status_does_not_expose_secrets() -> None:
@@ -20,10 +21,37 @@ def test_data_provider_status_does_not_expose_secrets() -> None:
     assert "api_key" not in str(payload).lower()
 
 
+def test_fmp_diagnostics_endpoint_does_not_expose_api_key_when_unconfigured() -> None:
+    response = TestClient(app).get("/data-providers/fmp/RKLB/diagnostics")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["ticker"] == "RKLB"
+    assert payload["provider"] == "financialmodelingprep"
+    assert "api_key" not in str(payload).lower()
+
+
+def test_diagnostic_capture_reports_section_errors() -> None:
+    result = _capture(lambda: (_ for _ in ()).throw(RuntimeError("missing config")))
+
+    assert result["ok"] is False
+    assert result["error_type"] == "RuntimeError"
+    assert result["message"] == "missing config"
+
+
+def test_diagnostics_redacts_api_keys_from_provider_errors() -> None:
+    message = "403 for https://example.test/profile/RKLB?apikey=secret-key&limit=5"
+
+    redacted = _redact_sensitive_url_params(message)
+
+    assert "secret-key" not in redacted
+    assert "apikey=<redacted>" in redacted
+
+
 def test_fmp_provider_normalizes_profile_and_prices() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.url.params["apikey"] == "test-key"
-        if request.url.path.endswith("/profile/RKLB"):
+        if request.url.path.endswith("/profile") and request.url.params["symbol"] == "RKLB":
             return httpx.Response(
                 200,
                 json=[
@@ -39,22 +67,23 @@ def test_fmp_provider_normalizes_profile_and_prices() -> None:
                     }
                 ],
             )
-        if request.url.path.endswith("/historical-price-full/RKLB"):
+        if (
+            request.url.path.endswith("/historical-price-eod/full")
+            and request.url.params["symbol"] == "RKLB"
+        ):
             return httpx.Response(
                 200,
-                json={
-                    "historical": [
-                        {
-                            "date": "2026-05-30",
-                            "open": 10,
-                            "high": 11,
-                            "low": 9,
-                            "close": 10.5,
-                            "adjClose": 10.4,
-                            "volume": 1000,
-                        }
-                    ]
-                },
+                json=[
+                    {
+                        "date": "2026-05-30",
+                        "open": 10,
+                        "high": 11,
+                        "low": 9,
+                        "close": 10.5,
+                        "adjClose": 10.4,
+                        "volume": 1000,
+                    }
+                ],
             )
         return httpx.Response(404)
 
@@ -75,7 +104,8 @@ def test_fmp_provider_normalizes_profile_and_prices() -> None:
 
 def test_fmp_provider_merges_financial_statement_rows_by_period_date() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
-        if request.url.path.endswith("/income-statement/LMT"):
+        assert request.url.params["symbol"] == "LMT"
+        if request.url.path.endswith("/income-statement"):
             return httpx.Response(
                 200,
                 json=[
@@ -90,7 +120,7 @@ def test_fmp_provider_merges_financial_statement_rows_by_period_date() -> None:
                     }
                 ],
             )
-        if request.url.path.endswith("/balance-sheet-statement/LMT"):
+        if request.url.path.endswith("/balance-sheet-statement"):
             return httpx.Response(
                 200,
                 json=[
@@ -102,7 +132,7 @@ def test_fmp_provider_merges_financial_statement_rows_by_period_date() -> None:
                     }
                 ],
             )
-        if request.url.path.endswith("/cash-flow-statement/LMT"):
+        if request.url.path.endswith("/cash-flow-statement"):
             return httpx.Response(
                 200,
                 json=[

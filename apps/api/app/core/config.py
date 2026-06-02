@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     postgres_port: int = 5432
     data_provider_mode: str = "sample"
     fmp_api_key: str | None = None
-    fmp_base_url: str = "https://financialmodelingprep.com/api/v3"
+    fmp_base_url: str = "https://financialmodelingprep.com/stable"
     sec_company_tickers_url: str = "https://www.sec.gov/files/company_tickers.json"
     sec_companyfacts_url_template: str = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
     sec_user_agent: str | None = None

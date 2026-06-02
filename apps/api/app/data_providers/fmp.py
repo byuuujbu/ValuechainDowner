@@ -18,7 +18,7 @@ class FinancialModelingPrepProvider:
         client: httpx.Client | None = None,
     ) -> None:
         self.api_key = api_key if api_key is not None else settings.fmp_api_key
-        self.base_url = (base_url or settings.fmp_base_url).rstrip("/")
+        self.base_url = _stable_base_url(base_url or settings.fmp_base_url)
         self.client = client or httpx.Client(timeout=20)
 
     @property
@@ -29,7 +29,7 @@ class FinancialModelingPrepProvider:
         raise NotImplementedError("FMP universe discovery is intentionally configured separately.")
 
     def get_asset(self, ticker: str, market: str | None = None) -> AssetProfile:
-        payload = self._get(f"profile/{ticker.upper()}")
+        payload = self._get("profile", params={"symbol": ticker.upper()})
         if not payload:
             raise LookupError(f"FMP asset not found: ticker={ticker}")
         row = payload[0]
@@ -58,8 +58,11 @@ class FinancialModelingPrepProvider:
         if end_date is not None:
             params["to"] = end_date.isoformat()
 
-        payload = self._get(f"historical-price-full/{ticker.upper()}", params=params)
-        rows = payload.get("historical", []) if isinstance(payload, dict) else []
+        payload = self._get(
+            "historical-price-eod/full",
+            params={**params, "symbol": ticker.upper()},
+        )
+        rows = payload.get("historical", []) if isinstance(payload, dict) else payload
         prices = [
             DailyPrice(
                 ticker=ticker.upper(),
@@ -85,9 +88,9 @@ class FinancialModelingPrepProvider:
         market: str | None = None,
     ) -> list[FundamentalsPeriod]:
         symbol = ticker.upper()
-        income_rows = self._statement_rows(f"income-statement/{symbol}")
-        balance_rows = self._statement_rows(f"balance-sheet-statement/{symbol}")
-        cash_rows = self._statement_rows(f"cash-flow-statement/{symbol}")
+        income_rows = self._statement_rows("income-statement", symbol)
+        balance_rows = self._statement_rows("balance-sheet-statement", symbol)
+        cash_rows = self._statement_rows("cash-flow-statement", symbol)
 
         balance_by_date = {row.get("date"): row for row in balance_rows}
         cash_by_date = {row.get("date"): row for row in cash_rows}
@@ -120,8 +123,8 @@ class FinancialModelingPrepProvider:
             )
         return sorted(periods, key=lambda period: period.period_end)
 
-    def _statement_rows(self, path: str) -> list[dict[str, Any]]:
-        payload = self._get(path, params={"period": "annual", "limit": "5"})
+    def _statement_rows(self, path: str, symbol: str) -> list[dict[str, Any]]:
+        payload = self._get(path, params={"symbol": symbol, "period": "annual", "limit": "5"})
         return payload if isinstance(payload, list) else []
 
     def _get(self, path: str, params: dict[str, str] | None = None) -> Any:
@@ -143,3 +146,10 @@ def _decimal_or_none(value: object) -> Decimal | None:
 
 def _period_type(value: object) -> str:
     return "annual" if str(value or "").upper() == "FY" else str(value or "annual").lower()
+
+
+def _stable_base_url(base_url: str) -> str:
+    normalized = base_url.rstrip("/")
+    if normalized.endswith("/api/v3"):
+        return normalized.removesuffix("/api/v3") + "/stable"
+    return normalized

@@ -8,6 +8,7 @@ from app.scoring import CommonStockScoringEngine
 from app.services.asset_backdata import get_asset_backdata
 from app.services.backtest import run_sample_backtest
 from app.services.journal import JOURNAL_REQUIREMENTS, WATCHLIST
+from app.services.live_data_diagnostics import fmp_ticker_diagnostics
 from app.services.space_map import INDUSTRIES, SPACE_MAP
 
 router = APIRouter()
@@ -16,6 +17,11 @@ router = APIRouter()
 @router.get("/data-providers/status")
 def data_providers_status() -> dict[str, object]:
     return data_provider_status()
+
+
+@router.get("/data-providers/fmp/{ticker}/diagnostics")
+def fmp_diagnostics(ticker: str) -> dict[str, object]:
+    return fmp_ticker_diagnostics(ticker)
 
 
 @router.get("/screening/results")
