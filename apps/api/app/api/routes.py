@@ -10,6 +10,7 @@ from app.services.backtest import run_sample_backtest
 from app.services.journal import JOURNAL_REQUIREMENTS, WATCHLIST
 from app.services.live_data_diagnostics import (
     fmp_ticker_diagnostics,
+    sec_metrics_preview,
     sec_normalized_fundamentals,
     sec_ticker_diagnostics,
 )
@@ -36,6 +37,11 @@ def sec_diagnostics(ticker: str) -> dict[str, object]:
 @router.get("/data-providers/sec/{ticker}/fundamentals")
 def sec_fundamentals(ticker: str) -> dict[str, object]:
     return sec_normalized_fundamentals(ticker)
+
+
+@router.get("/data-providers/sec/{ticker}/metrics-preview")
+def sec_metrics(ticker: str) -> dict[str, object]:
+    return sec_metrics_preview(ticker)
 
 
 @router.get("/screening/results")

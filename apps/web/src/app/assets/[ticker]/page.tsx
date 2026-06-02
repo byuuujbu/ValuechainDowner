@@ -114,6 +114,37 @@ type SecFundamentalsResponse = {
   };
 };
 
+type MetricsMap = Record<string, number | null>;
+
+type SecMetricsPreviewResponse = {
+  ticker: string;
+  provider: string;
+  configured: boolean;
+  metrics_preview: {
+    ok: boolean;
+    cik?: string;
+    entity_name?: string;
+    price_input?: {
+      provider: string;
+      rows: number;
+      start_date: string;
+      end_date: string;
+      notice: string;
+    };
+    fundamental_inputs?: {
+      baseline: string;
+      preview: string;
+      sec_rows: number;
+      latest_sec_period: string;
+    };
+    sample_metrics?: MetricsMap;
+    sec_metrics?: MetricsMap;
+    metric_delta?: MetricsMap;
+    status?: string;
+    message?: string;
+  };
+};
+
 type Backdata = {
   asset: {
     ticker: string;
@@ -172,6 +203,7 @@ export default function AssetBackdataPage({ params }: { params: Promise<{ ticker
   const [ticker, setTicker] = useState("");
   const [data, setData] = useState<Backdata | null>(null);
   const [secData, setSecData] = useState<SecFundamentalsResponse | null>(null);
+  const [metricsPreview, setMetricsPreview] = useState<SecMetricsPreviewResponse | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -200,6 +232,17 @@ export default function AssetBackdataPage({ params }: { params: Promise<{ ticker
       .catch(() => setSecData(null));
   }, [ticker]);
 
+  useEffect(() => {
+    if (!ticker) return;
+    fetch(`${apiBaseUrl}/data-providers/sec/${ticker}/metrics-preview`)
+      .then((response) => {
+        if (!response.ok) throw new Error(`SEC metrics API 응답 실패: ${response.status}`);
+        return response.json();
+      })
+      .then((payload: SecMetricsPreviewResponse) => setMetricsPreview(payload))
+      .catch(() => setMetricsPreview(null));
+  }, [ticker]);
+
   if (error) {
     return (
       <main className="shell">
@@ -225,15 +268,17 @@ export default function AssetBackdataPage({ params }: { params: Promise<{ ticker
     );
   }
 
-  return <AssetBackdata data={data} secData={secData} />;
+  return <AssetBackdata data={data} secData={secData} metricsPreview={metricsPreview} />;
 }
 
 function AssetBackdata({
   data,
   secData,
+  metricsPreview,
 }: {
   data: Backdata;
   secData: SecFundamentalsResponse | null;
+  metricsPreview: SecMetricsPreviewResponse | null;
 }) {
   const latestFundamental = data.fundamentals[0];
   const fiscalMeta = useMemo(() => formatFiscalMeta(latestFundamental), [latestFundamental]);
@@ -241,6 +286,9 @@ function AssetBackdata({
     ? secData.normalized_fundamentals.rows ?? []
     : [];
   const latestSecFundamental = secRows[secRows.length - 1];
+  const metricsPreviewPayload = metricsPreview?.metrics_preview.ok
+    ? metricsPreview.metrics_preview
+    : null;
 
   return (
     <main className="shell">
@@ -495,6 +543,40 @@ function AssetBackdata({
         </section>
       ) : null}
 
+      {metricsPreviewPayload?.sample_metrics &&
+      metricsPreviewPayload.sec_metrics &&
+      metricsPreviewPayload.metric_delta ? (
+        <section className="section">
+          <div className="sectionHead">
+            <div>
+              <h2>SEC 재무 입력 영향</h2>
+              <p>
+                공식 점수는 아직 샘플 기준입니다. 아래는 가격 입력은 샘플 그대로 두고 재무 입력만
+                SEC 10-K로 바꿨을 때 원시 지표가 어떻게 달라지는지 보여주는 미리보기입니다.
+              </p>
+            </div>
+          </div>
+          <div className="sourceBanner">
+            <strong>미리보기 전용</strong>
+            <span>가격 {metricsPreviewPayload.price_input?.provider}</span>
+            <span>재무 {metricsPreviewPayload.fundamental_inputs?.preview}</span>
+            <span>SEC 기준일 {metricsPreviewPayload.fundamental_inputs?.latest_sec_period}</span>
+          </div>
+          <div className="metricCompareGrid">
+            {metricsPreviewFields.map((field) => (
+              <div key={field.key}>
+                <span>{field.label}</span>
+                <strong>{metricValueLabel(metricsPreviewPayload.sec_metrics?.[field.key])}</strong>
+                <small>
+                  샘플 {metricValueLabel(metricsPreviewPayload.sample_metrics?.[field.key])} / 변화{" "}
+                  {metricValueLabel(metricsPreviewPayload.metric_delta?.[field.key], true)}
+                </small>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       <section className="section">
         <h2>데이터 출처</h2>
         <p>{data.source.notice}</p>
@@ -544,6 +626,15 @@ const secEvidenceFields: { key: SecNumericKey; label: string }[] = [
   { key: "shares_outstanding", label: "주식수" },
 ];
 
+const metricsPreviewFields = [
+  { key: "roic", label: "ROIC" },
+  { key: "operating_margin", label: "영업이익률" },
+  { key: "fcf_yield", label: "FCF 수익률" },
+  { key: "psr", label: "PSR" },
+  { key: "sector_relative_valuation", label: "섹터 상대 밸류" },
+  { key: "earnings_stability", label: "이익 안정성" },
+];
+
 function secSourceSummary(row: SecFundamentalRow, key: SecNumericKey) {
   const source = row.source_metadata[String(key)];
   if (!source) return "SEC 원천 없음";
@@ -580,6 +671,12 @@ function krwMillionLabel(row: SecFundamentalRow, key: SecConversionKey) {
 function formatMaybeCompact(value: string | number | null, currency?: string) {
   const numeric = toNumber(value);
   return numeric === null ? "데이터 없음" : formatCompact(numeric, currency);
+}
+
+function metricValueLabel(value: number | null | undefined, signed = false) {
+  if (value === null || value === undefined) return "데이터 없음";
+  const prefix = signed && value > 0 ? "+" : "";
+  return `${prefix}${formatNumber(value)}`;
 }
 
 function formatFiscalMeta(fundamental: Fundamental) {

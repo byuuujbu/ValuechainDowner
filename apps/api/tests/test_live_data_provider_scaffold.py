@@ -52,6 +52,16 @@ def test_sec_normalized_fundamentals_endpoint_returns_safe_structure() -> None:
     assert "api_key" not in str(payload).lower()
 
 
+def test_sec_metrics_preview_endpoint_returns_safe_structure() -> None:
+    response = TestClient(app).get("/data-providers/sec/RKLB/metrics-preview")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["ticker"] == "RKLB"
+    assert payload["provider"] == "sec_edgar"
+    assert "api_key" not in str(payload).lower()
+
+
 def test_diagnostic_capture_reports_section_errors() -> None:
     result = _capture(lambda: (_ for _ in ()).throw(RuntimeError("missing config")))
 

@@ -8,7 +8,9 @@ from typing import Any
 import httpx
 
 from app.core.config import settings
+from app.data_providers import SampleCsvDataProvider
 from app.data_providers.fmp import FinancialModelingPrepProvider
+from app.data_providers.interfaces import FundamentalsPeriod
 from app.data_providers.sec_edgar import (
     SecEdgarClient,
     SecFactSource,
@@ -16,6 +18,7 @@ from app.data_providers.sec_edgar import (
     annual_facts_by_tag,
     normalized_fundamentals_from_companyfacts,
 )
+from app.scoring.metrics import calculate_raw_metrics
 from app.services.currency import usd_to_krw_million
 
 
@@ -58,6 +61,17 @@ def sec_normalized_fundamentals(ticker: str) -> dict[str, object]:
         "provider": "sec_edgar",
         "configured": client.is_configured,
         "normalized_fundamentals": _capture(lambda: _sec_normalized_payload(client, symbol)),
+    }
+
+
+def sec_metrics_preview(ticker: str) -> dict[str, object]:
+    client = SecEdgarClient()
+    symbol = ticker.upper()
+    return {
+        "ticker": symbol,
+        "provider": "sec_edgar",
+        "configured": client.is_configured,
+        "metrics_preview": _capture(lambda: _sec_metrics_preview_payload(client, symbol)),
     }
 
 
@@ -189,6 +203,71 @@ def _sec_normalized_payload(client: SecEdgarClient, ticker: str) -> dict[str, ob
     }
 
 
+def _sec_metrics_preview_payload(client: SecEdgarClient, ticker: str) -> dict[str, object]:
+    sample_provider = SampleCsvDataProvider()
+    asset = sample_provider.get_asset(ticker)
+    prices = sample_provider.get_daily_prices(asset.ticker, market=asset.market)
+    sample_fundamentals = sample_provider.get_fundamentals(asset.ticker, market=asset.market)
+
+    cik = client.find_cik_by_ticker(ticker)
+    companyfacts = client.companyfacts(cik)
+    sec_rows = normalized_fundamentals_from_companyfacts(
+        companyfacts,
+        ticker=ticker,
+        market=asset.market,
+    )
+    sec_fundamentals = [_sec_row_to_fundamentals_period(row) for row in sec_rows]
+    sample_metrics = calculate_raw_metrics(prices, sample_fundamentals)
+    sec_metrics = calculate_raw_metrics(prices, sec_fundamentals)
+    latest_sec = sec_rows[-1] if sec_rows else None
+
+    return {
+        "cik": cik,
+        "entity_name": companyfacts.get("entityName"),
+        "price_input": {
+            "provider": "SampleCsvDataProvider",
+            "rows": len(prices),
+            "start_date": prices[0].date.isoformat() if prices else None,
+            "end_date": prices[-1].date.isoformat() if prices else None,
+            "notice": "가격 provider 연결 전까지 가격 입력은 샘플 데이터를 사용합니다.",
+        },
+        "fundamental_inputs": {
+            "baseline": "sample_csv",
+            "preview": "sec_edgar_companyfacts",
+            "sec_rows": len(sec_rows),
+            "latest_sec_period": latest_sec.period_end.isoformat() if latest_sec else None,
+            "latest_sec_sources": (
+                _normalized_period_payload(latest_sec)["source_metadata"] if latest_sec else {}
+            ),
+        },
+        "sample_metrics": _metrics_payload(sample_metrics),
+        "sec_metrics": _metrics_payload(sec_metrics),
+        "metric_delta": _metric_delta_payload(sample_metrics, sec_metrics),
+        "status": "preview_only",
+    }
+
+
+def _sec_row_to_fundamentals_period(row: SecNormalizedFundamentalsPeriod) -> FundamentalsPeriod:
+    return FundamentalsPeriod(
+        ticker=row.ticker,
+        market=row.market,
+        currency=row.currency,
+        period_end=row.period_end,
+        period_type=row.period_type,
+        revenue=row.revenue,
+        operating_income=row.operating_income,
+        net_income=row.net_income,
+        total_assets=row.total_assets,
+        total_equity=row.total_equity,
+        total_debt=row.total_debt,
+        operating_cash_flow=row.operating_cash_flow,
+        capex=row.capex,
+        free_cash_flow=row.free_cash_flow,
+        shares_outstanding=row.shares_outstanding,
+        data_source=row.data_source,
+    )
+
+
 def _normalized_period_payload(row: SecNormalizedFundamentalsPeriod) -> dict[str, object]:
     return {
         "ticker": row.ticker,
@@ -213,6 +292,26 @@ def _normalized_period_payload(row: SecNormalizedFundamentalsPeriod) -> dict[str
             for field, source in row.source_metadata.items()
         },
     }
+
+
+def _metrics_payload(metrics: dict[str, float | None]) -> dict[str, object]:
+    return {key: _float_or_none(value) for key, value in metrics.items()}
+
+
+def _metric_delta_payload(
+    baseline: dict[str, float | None],
+    preview: dict[str, float | None],
+) -> dict[str, object]:
+    return {
+        key: _float_or_none(preview.get(key) - baseline.get(key))
+        if preview.get(key) is not None and baseline.get(key) is not None
+        else None
+        for key in sorted(set(baseline) | set(preview))
+    }
+
+
+def _float_or_none(value: float | None) -> float | None:
+    return round(value, 8) if value is not None else None
 
 
 def _source_payload(source: SecFactSource | list[SecFactSource]) -> dict[str, object] | list[dict[str, object]]:

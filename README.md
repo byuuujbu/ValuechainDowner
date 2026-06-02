@@ -152,6 +152,8 @@ Notes:
   fact extraction for one ticker without changing the dashboard data source.
 - `/data-providers/sec/{ticker}/fundamentals` normalizes SEC companyfacts into annual
   financial rows while preserving tag, filing, accession, and original value metadata.
+- `/data-providers/sec/{ticker}/metrics-preview` calculates raw metrics with sample
+  prices plus SEC fundamentals to preview scoring-input impact before changing official scores.
 - If credentials are absent, existing sample-data screens continue to work.
 
 ## Scoring
@@ -212,6 +214,7 @@ Implemented gates:
 - `GET /data-providers/fmp/{ticker}/diagnostics`
 - `GET /data-providers/sec/{ticker}/diagnostics`
 - `GET /data-providers/sec/{ticker}/fundamentals`
+- `GET /data-providers/sec/{ticker}/metrics-preview`
 - `GET /screening/results`
 - `GET /industries`
 - `GET /industries/space/value-chain`

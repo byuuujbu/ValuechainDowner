@@ -324,6 +324,31 @@ h1 {
   margin-top: 16px;
 }
 
+.metricCompareGrid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.metricCompareGrid div {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.metricCompareGrid span,
+.metricCompareGrid small {
+  color: var(--muted);
+  display: block;
+}
+
+.metricCompareGrid strong {
+  display: block;
+  font-size: 22px;
+  margin: 8px 0;
+}
+
 .sourceBanner {
   align-items: center;
   background: #f0f4f8;
@@ -406,7 +431,8 @@ h1 {
   }
 
   .grid.two,
-  .grid.three {
+  .grid.three,
+  .metricCompareGrid {
     grid-template-columns: 1fr;
   }
 }
