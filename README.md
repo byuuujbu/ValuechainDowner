@@ -148,6 +148,8 @@ Notes:
 - `/data-providers/status` reports whether providers are configured without exposing secrets.
 - `/data-providers/fmp/{ticker}/diagnostics` checks profile, price, and fundamental fetches
   for one ticker without changing the dashboard data source.
+- `/data-providers/sec/{ticker}/diagnostics` checks SEC CIK lookup and annual 10-K
+  fact extraction for one ticker without changing the dashboard data source.
 - If credentials are absent, existing sample-data screens continue to work.
 
 ## Scoring
@@ -206,6 +208,7 @@ Implemented gates:
 - `GET /health`
 - `GET /data-providers/status`
 - `GET /data-providers/fmp/{ticker}/diagnostics`
+- `GET /data-providers/sec/{ticker}/diagnostics`
 - `GET /screening/results`
 - `GET /industries`
 - `GET /industries/space/value-chain`

@@ -6,7 +6,7 @@ import httpx
 from fastapi.testclient import TestClient
 
 from app.data_providers.fmp import FinancialModelingPrepProvider
-from app.data_providers.sec_edgar import latest_annual_fact, normalize_cik
+from app.data_providers.sec_edgar import annual_facts_by_tag, latest_annual_fact, normalize_cik
 from app.main import app
 from app.services.live_data_diagnostics import _capture, _redact_sensitive_url_params
 
@@ -28,6 +28,16 @@ def test_fmp_diagnostics_endpoint_does_not_expose_api_key_when_unconfigured() ->
     payload = response.json()
     assert payload["ticker"] == "RKLB"
     assert payload["provider"] == "financialmodelingprep"
+    assert "api_key" not in str(payload).lower()
+
+
+def test_sec_diagnostics_endpoint_returns_safe_structure_when_configured_or_not() -> None:
+    response = TestClient(app).get("/data-providers/sec/RKLB/diagnostics")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["ticker"] == "RKLB"
+    assert payload["provider"] == "sec_edgar"
     assert "api_key" not in str(payload).lower()
 
 
@@ -184,3 +194,51 @@ def test_sec_helpers_normalize_cik_and_extract_latest_annual_fact() -> None:
     assert result is not None
     assert result[0] == Decimal("100")
     assert result[1]["end"] == "2025-12-31"
+
+
+def test_sec_annual_facts_by_tag_returns_latest_unique_10k_periods() -> None:
+    companyfacts = {
+        "facts": {
+            "us-gaap": {
+                "NetIncomeLoss": {
+                    "units": {
+                        "USD": [
+                            {
+                                "form": "10-K",
+                                "end": "2024-12-31",
+                                "filed": "2025-01-30",
+                                "accn": "old",
+                                "val": 90,
+                            },
+                            {
+                                "form": "10-K",
+                                "end": "2024-12-31",
+                                "filed": "2025-02-01",
+                                "accn": "new",
+                                "val": 91,
+                            },
+                            {
+                                "form": "10-Q",
+                                "end": "2025-03-31",
+                                "filed": "2025-05-01",
+                                "accn": "q",
+                                "val": 30,
+                            },
+                            {
+                                "form": "10-K",
+                                "end": "2025-12-31",
+                                "filed": "2026-02-01",
+                                "accn": "latest",
+                                "val": 100,
+                            },
+                        ]
+                    }
+                }
+            }
+        }
+    }
+
+    rows = annual_facts_by_tag(companyfacts, "NetIncomeLoss", limit=5)
+
+    assert [row["end"] for row in rows] == ["2024-12-31", "2025-12-31"]
+    assert rows[0]["accn"] == "new"

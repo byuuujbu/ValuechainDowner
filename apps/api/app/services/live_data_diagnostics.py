@@ -8,6 +8,7 @@ from typing import Any
 import httpx
 
 from app.data_providers.fmp import FinancialModelingPrepProvider
+from app.data_providers.sec_edgar import SecEdgarClient, annual_facts_by_tag
 
 
 def fmp_ticker_diagnostics(ticker: str) -> dict[str, object]:
@@ -22,6 +23,21 @@ def fmp_ticker_diagnostics(ticker: str) -> dict[str, object]:
         "ticker": symbol,
         "provider": "financialmodelingprep",
         "configured": provider.is_configured,
+        "sections": sections,
+    }
+
+
+def sec_ticker_diagnostics(ticker: str) -> dict[str, object]:
+    client = SecEdgarClient()
+    symbol = ticker.upper()
+    sections = {
+        "cik": _capture(lambda: _sec_cik_payload(client, symbol)),
+        "fundamental_facts": _capture(lambda: _sec_fundamental_payload(client, symbol)),
+    }
+    return {
+        "ticker": symbol,
+        "provider": "sec_edgar",
+        "configured": client.is_configured,
         "sections": sections,
     }
 
@@ -104,6 +120,64 @@ def _fundamentals_payload(provider: FinancialModelingPrepProvider, ticker: str) 
             for row in latest_rows
         ],
     }
+
+
+SEC_FACT_TAGS = {
+    "revenue": ["RevenueFromContractWithCustomerExcludingAssessedTax", "Revenues", "SalesRevenueNet"],
+    "operating_income": ["OperatingIncomeLoss"],
+    "net_income": ["NetIncomeLoss"],
+    "total_assets": ["Assets"],
+    "total_equity": ["StockholdersEquity", "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"],
+    "total_debt": ["LongTermDebtAndFinanceLeaseObligations", "LongTermDebt", "DebtCurrent"],
+    "operating_cash_flow": ["NetCashProvidedByUsedInOperatingActivities"],
+    "capex": ["PaymentsToAcquirePropertyPlantAndEquipment"],
+    "free_cash_flow": [],
+    "shares_outstanding": ["EntityCommonStockSharesOutstanding", "WeightedAverageNumberOfDilutedSharesOutstanding"],
+}
+
+
+def _sec_cik_payload(client: SecEdgarClient, ticker: str) -> dict[str, object]:
+    return {"cik": client.find_cik_by_ticker(ticker)}
+
+
+def _sec_fundamental_payload(client: SecEdgarClient, ticker: str) -> dict[str, object]:
+    cik = client.find_cik_by_ticker(ticker)
+    companyfacts = client.companyfacts(cik)
+    return {
+        "cik": cik,
+        "entity_name": companyfacts.get("entityName"),
+        "fields": {
+            field: _sec_field_payload(companyfacts, tags)
+            for field, tags in SEC_FACT_TAGS.items()
+        },
+    }
+
+
+def _sec_field_payload(companyfacts: dict[str, Any], tags: list[str]) -> dict[str, object]:
+    if not tags:
+        return {"ok": False, "reason": "derived_metric_not_direct_sec_tag", "tag": None, "latest_rows": []}
+    for tag in tags:
+        rows = annual_facts_by_tag(companyfacts, tag, unit="USD", limit=5)
+        if not rows:
+            rows = annual_facts_by_tag(companyfacts, tag, unit="shares", limit=5)
+        if rows:
+            return {
+                "ok": True,
+                "tag": tag,
+                "latest_rows": [
+                    {
+                        "fiscal_year": row.get("fy"),
+                        "period_end": row.get("end"),
+                        "filed": row.get("filed"),
+                        "form": row.get("form"),
+                        "value": _string_or_none(row.get("val")),
+                        "accession": row.get("accn"),
+                        "frame": row.get("frame"),
+                    }
+                    for row in rows
+                ],
+            }
+    return {"ok": False, "reason": "no_supported_annual_10k_fact", "tag": None, "latest_rows": []}
 
 
 def _string_or_none(value: Decimal | Any | None) -> str | None:

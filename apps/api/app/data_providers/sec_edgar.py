@@ -72,3 +72,25 @@ def latest_annual_fact(
         return None
     latest = sorted(rows, key=lambda row: (row.get("end") or "", row.get("filed") or ""))[-1]
     return Decimal(str(latest["val"])), latest
+
+
+def annual_facts_by_tag(
+    companyfacts: dict[str, Any],
+    tag: str,
+    unit: str = "USD",
+    limit: int = 5,
+) -> list[dict[str, Any]]:
+    facts = companyfacts.get("facts", {}).get("us-gaap", {})
+    units = facts.get(tag, {}).get("units", {})
+    rows = [
+        row
+        for row in units.get(unit, [])
+        if row.get("form") == "10-K" and row.get("val") is not None and row.get("end")
+    ]
+    latest_by_end: dict[str, dict[str, Any]] = {}
+    for row in sorted(rows, key=lambda item: (item.get("filed") or "", item.get("accn") or "")):
+        latest_by_end[row["end"]] = row
+    return sorted(
+        latest_by_end.values(),
+        key=lambda item: item.get("end") or "",
+    )[-limit:]
