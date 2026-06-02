@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from app.data_providers.fmp import FinancialModelingPrepProvider
 from app.data_providers.sec_edgar import annual_facts_by_tag, latest_annual_fact, normalize_cik
+from app.data_providers.sec_edgar import normalized_fundamentals_from_companyfacts
 from app.main import app
 from app.services.live_data_diagnostics import _capture, _redact_sensitive_url_params
 
@@ -33,6 +34,16 @@ def test_fmp_diagnostics_endpoint_does_not_expose_api_key_when_unconfigured() ->
 
 def test_sec_diagnostics_endpoint_returns_safe_structure_when_configured_or_not() -> None:
     response = TestClient(app).get("/data-providers/sec/RKLB/diagnostics")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["ticker"] == "RKLB"
+    assert payload["provider"] == "sec_edgar"
+    assert "api_key" not in str(payload).lower()
+
+
+def test_sec_normalized_fundamentals_endpoint_returns_safe_structure() -> None:
+    response = TestClient(app).get("/data-providers/sec/RKLB/fundamentals")
 
     assert response.status_code == 200
     payload = response.json()
@@ -242,3 +253,67 @@ def test_sec_annual_facts_by_tag_returns_latest_unique_10k_periods() -> None:
 
     assert [row["end"] for row in rows] == ["2024-12-31", "2025-12-31"]
     assert rows[0]["accn"] == "new"
+
+
+def test_sec_normalized_fundamentals_preserves_sources_and_derives_fcf() -> None:
+    companyfacts = {
+        "facts": {
+            "us-gaap": {
+                "RevenueFromContractWithCustomerExcludingAssessedTax": {
+                    "units": {
+                        "USD": [
+                            {
+                                "form": "10-K",
+                                "end": "2025-12-31",
+                                "filed": "2026-02-01",
+                                "accn": "revenue-accn",
+                                "val": 1000,
+                                "fy": 2025,
+                                "frame": "CY2025",
+                            }
+                        ]
+                    }
+                },
+                "NetCashProvidedByUsedInOperatingActivities": {
+                    "units": {
+                        "USD": [
+                            {
+                                "form": "10-K",
+                                "end": "2025-12-31",
+                                "filed": "2026-02-01",
+                                "accn": "ocf-accn",
+                                "val": 200,
+                                "fy": 2025,
+                            }
+                        ]
+                    }
+                },
+                "PaymentsToAcquirePropertyPlantAndEquipment": {
+                    "units": {
+                        "USD": [
+                            {
+                                "form": "10-K",
+                                "end": "2025-12-31",
+                                "filed": "2026-02-01",
+                                "accn": "capex-accn",
+                                "val": 50,
+                                "fy": 2025,
+                            }
+                        ]
+                    }
+                },
+            }
+        }
+    }
+
+    rows = normalized_fundamentals_from_companyfacts(companyfacts, ticker="RKLB")
+
+    assert len(rows) == 1
+    assert rows[0].revenue == Decimal("1000")
+    assert rows[0].operating_cash_flow == Decimal("200")
+    assert rows[0].capex == Decimal("-50")
+    assert rows[0].free_cash_flow == Decimal("150")
+    assert rows[0].source_metadata["revenue"].tag == (
+        "RevenueFromContractWithCustomerExcludingAssessedTax"
+    )
+    assert rows[0].source_metadata["revenue"].accession == "revenue-accn"

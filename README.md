@@ -150,6 +150,8 @@ Notes:
   for one ticker without changing the dashboard data source.
 - `/data-providers/sec/{ticker}/diagnostics` checks SEC CIK lookup and annual 10-K
   fact extraction for one ticker without changing the dashboard data source.
+- `/data-providers/sec/{ticker}/fundamentals` normalizes SEC companyfacts into annual
+  financial rows while preserving tag, filing, accession, and original value metadata.
 - If credentials are absent, existing sample-data screens continue to work.
 
 ## Scoring
@@ -209,6 +211,7 @@ Implemented gates:
 - `GET /data-providers/status`
 - `GET /data-providers/fmp/{ticker}/diagnostics`
 - `GET /data-providers/sec/{ticker}/diagnostics`
+- `GET /data-providers/sec/{ticker}/fundamentals`
 - `GET /screening/results`
 - `GET /industries`
 - `GET /industries/space/value-chain`

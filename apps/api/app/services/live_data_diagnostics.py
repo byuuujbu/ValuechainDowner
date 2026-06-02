@@ -8,7 +8,13 @@ from typing import Any
 import httpx
 
 from app.data_providers.fmp import FinancialModelingPrepProvider
-from app.data_providers.sec_edgar import SecEdgarClient, annual_facts_by_tag
+from app.data_providers.sec_edgar import (
+    SecEdgarClient,
+    SecFactSource,
+    SecNormalizedFundamentalsPeriod,
+    annual_facts_by_tag,
+    normalized_fundamentals_from_companyfacts,
+)
 
 
 def fmp_ticker_diagnostics(ticker: str) -> dict[str, object]:
@@ -39,6 +45,17 @@ def sec_ticker_diagnostics(ticker: str) -> dict[str, object]:
         "provider": "sec_edgar",
         "configured": client.is_configured,
         "sections": sections,
+    }
+
+
+def sec_normalized_fundamentals(ticker: str) -> dict[str, object]:
+    client = SecEdgarClient()
+    symbol = ticker.upper()
+    return {
+        "ticker": symbol,
+        "provider": "sec_edgar",
+        "configured": client.is_configured,
+        "normalized_fundamentals": _capture(lambda: _sec_normalized_payload(client, symbol)),
     }
 
 
@@ -150,6 +167,65 @@ def _sec_fundamental_payload(client: SecEdgarClient, ticker: str) -> dict[str, o
             field: _sec_field_payload(companyfacts, tags)
             for field, tags in SEC_FACT_TAGS.items()
         },
+    }
+
+
+def _sec_normalized_payload(client: SecEdgarClient, ticker: str) -> dict[str, object]:
+    cik = client.find_cik_by_ticker(ticker)
+    companyfacts = client.companyfacts(cik)
+    rows = normalized_fundamentals_from_companyfacts(companyfacts, ticker=ticker)
+    return {
+        "cik": cik,
+        "entity_name": companyfacts.get("entityName"),
+        "row_count": len(rows),
+        "rows": [_normalized_period_payload(row) for row in rows],
+        "normalization_notes": [
+            "SEC capex tag is a positive cash outflow; normalized capex is stored as a negative value.",
+            "free_cash_flow is derived as operating_cash_flow + normalized_capex.",
+            "Each value keeps SEC tag, unit, period_end, filed date, accession, and original value.",
+        ],
+    }
+
+
+def _normalized_period_payload(row: SecNormalizedFundamentalsPeriod) -> dict[str, object]:
+    return {
+        "ticker": row.ticker,
+        "market": row.market,
+        "currency": row.currency,
+        "period_end": row.period_end.isoformat(),
+        "period_type": row.period_type,
+        "revenue": _string_or_none(row.revenue),
+        "operating_income": _string_or_none(row.operating_income),
+        "net_income": _string_or_none(row.net_income),
+        "total_assets": _string_or_none(row.total_assets),
+        "total_equity": _string_or_none(row.total_equity),
+        "total_debt": _string_or_none(row.total_debt),
+        "operating_cash_flow": _string_or_none(row.operating_cash_flow),
+        "capex": _string_or_none(row.capex),
+        "free_cash_flow": _string_or_none(row.free_cash_flow),
+        "shares_outstanding": _string_or_none(row.shares_outstanding),
+        "data_source": row.data_source,
+        "source_metadata": {
+            field: _source_payload(source)
+            for field, source in row.source_metadata.items()
+        },
+    }
+
+
+def _source_payload(source: SecFactSource | list[SecFactSource]) -> dict[str, object] | list[dict[str, object]]:
+    if isinstance(source, list):
+        return [_source_payload(item) for item in source]
+    return {
+        "tag": source.tag,
+        "unit": source.unit,
+        "period_end": source.period_end.isoformat(),
+        "fiscal_year": source.fiscal_year,
+        "filed": source.filed.isoformat() if source.filed else None,
+        "form": source.form,
+        "accession": source.accession,
+        "frame": source.frame,
+        "original_value": _string_or_none(source.original_value),
+        "normalized_value": _string_or_none(source.normalized_value),
     }
 
 
