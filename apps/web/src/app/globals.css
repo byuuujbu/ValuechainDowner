@@ -147,6 +147,15 @@ h1 {
   margin-top: 8px;
 }
 
+.metric em {
+  color: #195eb8;
+  display: block;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  margin-top: 6px;
+}
+
 .table {
   display: grid;
   margin-top: 14px;

@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     sec_company_tickers_url: str = "https://www.sec.gov/files/company_tickers.json"
     sec_companyfacts_url_template: str = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
     sec_user_agent: str | None = None
+    display_usd_krw_rate: str | None = None
 
     model_config = SettingsConfigDict(env_file=("../../.env", ".env"), extra="ignore")
 

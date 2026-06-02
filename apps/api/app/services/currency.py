@@ -57,3 +57,7 @@ def _usd_to_krw_million(value: Decimal | None, usd_krw_rate: Decimal) -> Decimal
     if value is None:
         return None
     return (value * usd_krw_rate / KRW_MILLION).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+
+def usd_to_krw_million(value: Decimal | None, usd_krw_rate: Decimal) -> Decimal | None:
+    return _usd_to_krw_million(value, usd_krw_rate)

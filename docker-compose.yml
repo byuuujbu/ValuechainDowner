@@ -31,8 +31,9 @@ services:
       POSTGRES_PORT: 5432
       DATA_PROVIDER_MODE: ${DATA_PROVIDER_MODE:-sample}
       FMP_API_KEY: ${FMP_API_KEY:-}
-      FMP_BASE_URL: ${FMP_BASE_URL:-https://financialmodelingprep.com/api/v3}
+      FMP_BASE_URL: ${FMP_BASE_URL:-https://financialmodelingprep.com/stable}
       SEC_USER_AGENT: ${SEC_USER_AGENT:-}
+      DISPLAY_USD_KRW_RATE: ${DISPLAY_USD_KRW_RATE:-}
     ports:
       - "${API_PORT:-8001}:8000"
     depends_on:

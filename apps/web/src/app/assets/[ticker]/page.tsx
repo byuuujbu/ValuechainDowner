@@ -65,6 +65,23 @@ type SecFundamentalRow = {
   free_cash_flow: string | null;
   shares_outstanding: string | null;
   data_source: string;
+  display_conversion: {
+    available: boolean;
+    reason?: string;
+    source_currency?: string;
+    target_currency?: string;
+    fx_rate?: string;
+    unit?: string;
+    revenue?: string | null;
+    operating_income?: string | null;
+    net_income?: string | null;
+    total_assets?: string | null;
+    total_equity?: string | null;
+    total_debt?: string | null;
+    operating_cash_flow?: string | null;
+    capex?: string | null;
+    free_cash_flow?: string | null;
+  };
   source_metadata: Record<string, SecSource | SecSource[]>;
 };
 
@@ -79,6 +96,8 @@ type SecNumericKey =
   | "capex"
   | "free_cash_flow"
   | "shares_outstanding";
+
+type SecConversionKey = Exclude<SecNumericKey, "shares_outstanding">;
 
 type SecFundamentalsResponse = {
   ticker: string;
@@ -415,24 +434,28 @@ function AssetBackdata({
             <span>CIK {secData?.normalized_fundamentals.cik}</span>
             <span>최신 기준일 {latestSecFundamental.period_end}</span>
             <span>출처 {latestSecFundamental.data_source}</span>
+            <span>{conversionStatusLabel(latestSecFundamental)}</span>
           </div>
           <div className="grid three">
             <FinancialMetric
               label="SEC 매출"
               value={toNumber(latestSecFundamental.revenue)}
               currency={latestSecFundamental.currency}
+              secondaryValue={krwMillionLabel(latestSecFundamental, "revenue")}
               source={secSourceSummary(latestSecFundamental, "revenue")}
             />
             <FinancialMetric
               label="SEC 영업현금흐름"
               value={toNumber(latestSecFundamental.operating_cash_flow)}
               currency={latestSecFundamental.currency}
+              secondaryValue={krwMillionLabel(latestSecFundamental, "operating_cash_flow")}
               source={secSourceSummary(latestSecFundamental, "operating_cash_flow")}
             />
             <FinancialMetric
               label="SEC 잉여현금흐름"
               value={toNumber(latestSecFundamental.free_cash_flow)}
               currency={latestSecFundamental.currency}
+              secondaryValue={krwMillionLabel(latestSecFundamental, "free_cash_flow")}
               source="영업현금흐름 + 정규화 CAPEX"
             />
           </div>
@@ -490,17 +513,20 @@ function FinancialMetric({
   label,
   value,
   currency,
+  secondaryValue,
   source,
 }: {
   label: string;
   value: number | null;
   currency?: string;
+  secondaryValue?: string | null;
   source: string;
 }) {
   return (
     <div className="metric financialMetric">
       <span>{label}</span>
       <strong>{value === null ? "데이터 없음" : formatCompact(value, currency)}</strong>
+      {secondaryValue ? <em>{secondaryValue}</em> : null}
       <small>{source}</small>
     </div>
   );
@@ -536,6 +562,19 @@ function toNumber(value: string | number | null) {
   if (value === null) return null;
   const numeric = Number(value);
   return Number.isFinite(numeric) ? numeric : null;
+}
+
+function conversionStatusLabel(row: SecFundamentalRow) {
+  if (!row.display_conversion.available) return "원화 환산: 환율 미설정";
+  return `원화 환산: USD/KRW ${row.display_conversion.fx_rate}, 단위 백만원`;
+}
+
+function krwMillionLabel(row: SecFundamentalRow, key: SecConversionKey) {
+  if (!row.display_conversion.available) return null;
+  const value = row.display_conversion[key];
+  const numeric = toNumber(value ?? null);
+  if (numeric === null) return null;
+  return `KRW ${formatNumber(numeric)}백만원`;
 }
 
 function formatMaybeCompact(value: string | number | null, currency?: string) {

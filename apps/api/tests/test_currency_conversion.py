@@ -4,7 +4,7 @@ from decimal import Decimal
 import pytest
 
 from app.data_providers.interfaces import FundamentalsPeriod
-from app.services.currency import convert_fundamentals_to_krw_millions
+from app.services.currency import convert_fundamentals_to_krw_millions, usd_to_krw_million
 
 
 def test_convert_usd_fundamentals_to_krw_millions() -> None:
@@ -59,3 +59,8 @@ def test_reject_non_usd_currency_until_fx_provider_exists() -> None:
             ),
             usd_krw_rate=Decimal("1350"),
         )
+
+
+def test_convert_single_usd_value_to_krw_millions() -> None:
+    assert usd_to_krw_million(Decimal("601799000"), Decimal("1350")) == Decimal("812428.65")
+    assert usd_to_krw_million(None, Decimal("1350")) is None

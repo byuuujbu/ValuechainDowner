@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 import httpx
 
+from app.core.config import settings
 from app.data_providers.fmp import FinancialModelingPrepProvider
 from app.data_providers.sec_edgar import (
     SecEdgarClient,
@@ -15,6 +16,7 @@ from app.data_providers.sec_edgar import (
     annual_facts_by_tag,
     normalized_fundamentals_from_companyfacts,
 )
+from app.services.currency import usd_to_krw_million
 
 
 def fmp_ticker_diagnostics(ticker: str) -> dict[str, object]:
@@ -205,6 +207,7 @@ def _normalized_period_payload(row: SecNormalizedFundamentalsPeriod) -> dict[str
         "free_cash_flow": _string_or_none(row.free_cash_flow),
         "shares_outstanding": _string_or_none(row.shares_outstanding),
         "data_source": row.data_source,
+        "display_conversion": _display_conversion_payload(row),
         "source_metadata": {
             field: _source_payload(source)
             for field, source in row.source_metadata.items()
@@ -227,6 +230,50 @@ def _source_payload(source: SecFactSource | list[SecFactSource]) -> dict[str, ob
         "original_value": _string_or_none(source.original_value),
         "normalized_value": _string_or_none(source.normalized_value),
     }
+
+
+def _display_conversion_payload(row: SecNormalizedFundamentalsPeriod) -> dict[str, object]:
+    fx_rate = _configured_usd_krw_rate()
+    if row.currency != "USD":
+        return {
+            "available": False,
+            "reason": f"unsupported_source_currency:{row.currency}",
+        }
+    if fx_rate is None:
+        return {
+            "available": False,
+            "reason": "DISPLAY_USD_KRW_RATE is not configured",
+            "target_currency": "KRW",
+            "unit": "million_krw",
+        }
+    return {
+        "available": True,
+        "source_currency": "USD",
+        "target_currency": "KRW",
+        "fx_rate": str(fx_rate),
+        "unit": "million_krw",
+        "revenue": _string_or_none(usd_to_krw_million(row.revenue, fx_rate)),
+        "operating_income": _string_or_none(usd_to_krw_million(row.operating_income, fx_rate)),
+        "net_income": _string_or_none(usd_to_krw_million(row.net_income, fx_rate)),
+        "total_assets": _string_or_none(usd_to_krw_million(row.total_assets, fx_rate)),
+        "total_equity": _string_or_none(usd_to_krw_million(row.total_equity, fx_rate)),
+        "total_debt": _string_or_none(usd_to_krw_million(row.total_debt, fx_rate)),
+        "operating_cash_flow": _string_or_none(
+            usd_to_krw_million(row.operating_cash_flow, fx_rate)
+        ),
+        "capex": _string_or_none(usd_to_krw_million(row.capex, fx_rate)),
+        "free_cash_flow": _string_or_none(usd_to_krw_million(row.free_cash_flow, fx_rate)),
+    }
+
+
+def _configured_usd_krw_rate() -> Decimal | None:
+    raw_rate = settings.display_usd_krw_rate
+    if not raw_rate:
+        return None
+    try:
+        return Decimal(raw_rate)
+    except InvalidOperation:
+        return None
 
 
 def _sec_field_payload(companyfacts: dict[str, Any], tags: list[str]) -> dict[str, object]:
