@@ -420,16 +420,19 @@ function AssetBackdata({
             <FinancialMetric
               label="SEC 매출"
               value={toNumber(latestSecFundamental.revenue)}
+              currency={latestSecFundamental.currency}
               source={secSourceSummary(latestSecFundamental, "revenue")}
             />
             <FinancialMetric
               label="SEC 영업현금흐름"
               value={toNumber(latestSecFundamental.operating_cash_flow)}
+              currency={latestSecFundamental.currency}
               source={secSourceSummary(latestSecFundamental, "operating_cash_flow")}
             />
             <FinancialMetric
               label="SEC 잉여현금흐름"
               value={toNumber(latestSecFundamental.free_cash_flow)}
+              currency={latestSecFundamental.currency}
               source="영업현금흐름 + 정규화 CAPEX"
             />
           </div>
@@ -445,10 +448,10 @@ function AssetBackdata({
             {secRows.map((row) => (
               <div className="compactRow" key={row.period_end}>
                 <span>{row.period_end}</span>
-                <span>{formatMaybeCompact(row.revenue)}</span>
-                <span>{formatMaybeCompact(row.operating_income)}</span>
-                <span>{formatMaybeCompact(row.net_income)}</span>
-                <span>{formatMaybeCompact(row.free_cash_flow)}</span>
+                <span>{formatMaybeCompact(row.revenue, row.currency)}</span>
+                <span>{formatMaybeCompact(row.operating_income, row.currency)}</span>
+                <span>{formatMaybeCompact(row.net_income, row.currency)}</span>
+                <span>{formatMaybeCompact(row.free_cash_flow, row.currency)}</span>
                 <span>{firstAccession(row)}</span>
               </div>
             ))}
@@ -460,7 +463,9 @@ function AssetBackdata({
                   {field.label}
                   <small>{secSourceSummary(latestSecFundamental, field.key)}</small>
                 </span>
-                <strong>{formatMaybeCompact(latestSecFundamental[field.key])}</strong>
+                <strong>
+                  {formatMaybeCompact(latestSecFundamental[field.key], latestSecFundamental.currency)}
+                </strong>
               </div>
             ))}
           </div>
@@ -484,16 +489,18 @@ function AssetBackdata({
 function FinancialMetric({
   label,
   value,
+  currency,
   source,
 }: {
   label: string;
   value: number | null;
+  currency?: string;
   source: string;
 }) {
   return (
     <div className="metric financialMetric">
       <span>{label}</span>
-      <strong>{value === null ? "데이터 없음" : formatCompact(value)}</strong>
+      <strong>{value === null ? "데이터 없음" : formatCompact(value, currency)}</strong>
       <small>{source}</small>
     </div>
   );
@@ -531,9 +538,9 @@ function toNumber(value: string | number | null) {
   return Number.isFinite(numeric) ? numeric : null;
 }
 
-function formatMaybeCompact(value: string | number | null) {
+function formatMaybeCompact(value: string | number | null, currency?: string) {
   const numeric = toNumber(value);
-  return numeric === null ? "데이터 없음" : formatCompact(numeric);
+  return numeric === null ? "데이터 없음" : formatCompact(numeric, currency);
 }
 
 function formatFiscalMeta(fundamental: Fundamental) {
@@ -562,9 +569,10 @@ function formatNumber(value: number) {
   return new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 4 }).format(value);
 }
 
-function formatCompact(value: number) {
-  return new Intl.NumberFormat("ko-KR", {
+function formatCompact(value: number, currency?: string) {
+  const formatted = new Intl.NumberFormat("ko-KR", {
     notation: "compact",
     maximumFractionDigits: 2,
   }).format(value);
+  return currency ? `${currency} ${formatted}` : formatted;
 }
